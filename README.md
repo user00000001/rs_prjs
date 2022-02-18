@@ -19,10 +19,17 @@ rustup update
 rustup self uninstall
 ```
 
-## create a new project
+## create a new binary project
 
 ```shell
 cargo new rs00x --bin --vcs none
+```
+
+## create a new library project
+
+```shell
+cargo new rs00x --lib --vcs none
+cargo test -- --nocapture
 ```
 
 ## init a project
