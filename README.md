@@ -48,4 +48,16 @@ cargo check
 rustup main.rs
 cargo build # --release
 cargo run # --release
+
+cargo run -p adder # run workspace binary
+cargo test -p add-one # test workspace library
+```
+
+## install binaries
+
+```shell
+cargo install ripgrep # install ripgrep binary to $PATH
+
+cargo install cargo-something # cargo-something with `cargo` prefix in $PATH 
+cargo something # run a cargo subcommand
 ```
