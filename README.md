@@ -60,4 +60,11 @@ cargo install ripgrep # install ripgrep binary to $PATH
 
 cargo install cargo-something # cargo-something with `cargo` prefix in $PATH 
 cargo something # run a cargo subcommand
+
+rustup update
+rustup install nightly
+rustup default stable
+rustup toolchain list
+
+cargo +nightly run # use experimental feature
 ```
