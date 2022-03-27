@@ -67,4 +67,7 @@ rustup default stable
 rustup toolchain list
 
 cargo +nightly run # use experimental feature
+
+# Blocking waiting for file lock on package cache
+rm -rf ~/.cargo/.package-cache 
 ```
