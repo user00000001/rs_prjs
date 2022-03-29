@@ -70,4 +70,10 @@ cargo +nightly run # use experimental feature
 
 # Blocking waiting for file lock on package cache
 rm -rf ~/.cargo/.package-cache 
+
+mkdir -p examples && mv src/main.rs examples/example01.rs
+cargo run --example example01
+
+mkdir -p src/bin && mv src/main.rs src/bin/bin01.rs
+cargo run --bin bin01
 ```
