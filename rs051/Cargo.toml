@@ -1,0 +1,6 @@
+[package]
+edition = "2021"
+name = "rs051"
+version = "0.1.0"
+[dependencies]
+actix-web = "4"
