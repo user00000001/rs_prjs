@@ -1,0 +1,11 @@
+[package]
+edition = "2021"
+name = "rs054"
+version = "0.1.0"
+[dependencies]
+derive_more = "*"
+env_logger = "*"
+log = "*"
+
+[dependencies.actix-web]
+version = "4"
