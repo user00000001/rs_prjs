@@ -1,0 +1,12 @@
+[package]
+edition = "2021"
+name = "rs055"
+version = "0.1.0"
+[dependencies]
+actix-web = "4"
+[dependencies.serde]
+version = "1.0.136"
+features = ["derive"]
+[dependencies.tokio]
+version = "1"
+features = ["full"]
