@@ -1,0 +1,26 @@
+[package]
+name = "rs056"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde_json = "1"
+futures = "0.3"
+actix-multipart = "0.4"
+sanitize-filename = "0.3"
+
+[dependencies.actix-web]
+version = "4"
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
+
+[dependencies.uuid]
+version = "0.8"
+features = ["v4"]
+
+[dependencies.futures-util]
+version = "0.3.7"
+default-features = false
+features = ["std"]
