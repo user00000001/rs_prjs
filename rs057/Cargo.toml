@@ -1,0 +1,17 @@
+[package]
+edition = "2021"
+name = "rs057"
+version = "0.1.0"
+[dependencies]
+futures = "0.3.21"
+futures-util = "0.3.21"
+
+[dependencies.actix-web]
+version = "4"
+
+[dependencies.serde]
+features = ["derive"]
+version = "1.0.136"
+
+[dependencies.tokio]
+version = "1"
