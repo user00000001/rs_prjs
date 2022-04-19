@@ -77,3 +77,25 @@ cargo run --example example01
 mkdir -p src/bin && mv src/main.rs src/bin/bin01.rs
 cargo run --bin bin01
 ```
+
+## actix-web
+
+### http server initialization
+
+### ![http server flow](./assets/http_server.svg "http server")
+
+### architecture overview
+
+### ![architecture overview flow](./assets/connection_overview.svg "architecture overview")
+
+### accept loop in more detail
+
+### ![connect accept flow](./assets/connection_accept.svg "connect accept")
+
+### worker loop in more detail
+
+### ![connect worker flow](./assets/connection_worker.svg "connect worker")
+
+### request loop roughly
+
+### ![connect request flow](./assets/connection_request.svg "connect request")

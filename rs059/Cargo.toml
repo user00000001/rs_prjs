@@ -1,0 +1,31 @@
+[package]
+edition = "2021"
+name = "rs059"
+version = "0.1.0"
+[dependencies]
+actix = "0.13.0"
+actix-web-actors = "4"
+futures-channel = "0.3.21"
+futures-util = "0.3.21"
+native-tls = "0.2.10"
+url = "2.2.2"
+
+[dependencies.actix-web]
+version = "4"
+features = ["openssl"]
+
+[dependencies.openssl]
+version = "0.10"
+features = ["v110"]
+
+[dependencies.reqwest]
+features = ["json"]
+version = "0.11.10"
+
+[dependencies.tokio]
+features = ["full"]
+version = "1"
+
+[dependencies.tokio-tungstenite]
+features = ["native-tls"]
+version = "0.17.1"
