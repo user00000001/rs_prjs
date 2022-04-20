@@ -1,0 +1,47 @@
+[package]
+edition = "2021"
+name = "rs060"
+version = "0.1.0"
+
+[dependencies]
+actix = "0.12"
+actix-redis = "0.10"
+env_logger = "0.9"
+r2d2 = "0.8"
+log = "0.4"
+r2d2_sqlite = "0.19"
+rusqlite = "0.26"
+mongodb = "2.0"
+serde_json = "1"
+config = "0.11.0"
+derive_more = "0.99.2"
+dotenv = "0.15.0"
+tokio-pg-mapper = "0.2.0"
+tokio-pg-mapper-derive = "0.2.0"
+tokio-postgres = "0.7.5"
+
+[workspace]
+members = [
+    "diesel_example",
+]
+
+[dependencies.deadpool-postgres]
+version = "0.10.1"
+features = ["serde"]
+
+[dependencies.actix-web]
+version = "4"
+
+[dependencies.serde]
+version = "1"
+features = ["derive"]
+
+[dependencies.futures-util]
+version = "0.3"
+default-features = false
+features = ["std"]
+
+[dependencies.redis-async]
+version = "0.8"
+default_features = false
+features = ["tokio10"]
