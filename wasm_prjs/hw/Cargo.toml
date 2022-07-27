@@ -1,7 +1,6 @@
 [package]
 name = "hw"
 version = "0.1.0"
-authors = ["jiangyunbin <yunbin.jiang@anchain.ai>"]
 edition = "2018"
 
 [lib]
