@@ -3,109 +3,101 @@ non_upper_case_globals, non_snake_case)]
 
 fn main() {
   {
-    // operator: ()
-    // implement by Trait Fn / FnMut / FnOnce 
+    let mut v1: Vec<i32> = Vec::new();
+    // let mut v2 = Vec::new::<i32>(); // error: new function has not implemented with generic
+    let mut v2 = (0i32..5).collect::<Vec<i32>>();
 
-    let plus_one = |x: i32| x + 1;
-    // let plus_one = |x: i32| -> i32 { x + 1 }; // no need to give type of input/return parameter
-    assert_eq!(2, plus_one(1));
-    let plus_two = |x| {
-      let mut result: i32 = x;
-      result += 1;
-      result += 1;
-      result
-    };
-    assert_eq!(4, plus_two(2));
+    let v: Vec<i32> = vec![];
+    let v = vec!(1,2,3);
+    let v = vec![1,2,3];
+    // let mut temp = Vec::new();
+    // temp.push(1);
+    // temp.push(2);
+    // temp.push(3);
+    // let v = temp;
 
-    // different definations
-    fn  plus_one_v1   (x: i32) -> i32 { x + 1 }
-    let plus_one_v2 = |x: i32| -> i32 { x + 1 };
-    let plus_one_v3 = |x: i32| x + 1 ;
+    let v = vec![0; 10];
 
-    let num = 5;
-    let plus_num = |x: i32| x + num; // immutable borrow here
-    assert_eq!(10, plus_num(5));
+    let v: Vec<_> = (1..5).collect(); // Vec implements FromIterator trait
+
+    let a = vec!(1,2,3);
+    assert_eq!(a[1usize], 2); // Vec implements Index/IndexMut trait
+
+    let mut v = vec!(1,2,3);
+    assert_eq!(v.get(1), Some(&2)); // get or get_mut return reference
+    assert_eq!(v.get_mut(3), None);
+
+    let mut v = vec![1,2,3];
+    for i in &v {} // immutable reference
+    for i in &mut v {} // mutable reference
+    for i in v {} // i take the element ownnership from v
   }
 
   {
-    let mut num = 5;
-    {
-      let plus_num = |x: i32| x + num; // immutable borrow here
-      // let y = &mut num; // error: can not be mutable borrowed
-      assert_eq!(10, plus_num(5));
+    use std::time;
+    
+    fn push_1m(v: &mut Vec<usize>, total: usize) {
+      let e = time::SystemTime::now();
+      for i in 1..total {
+        v.push(i);
+      }
+      let ed = time::SystemTime::now();
+      println!("time spend: {:?}", ed.duration_since(e).unwrap());
     }
-    // let plus_num = |x: i32| x + num; // immutable borrow here
-    let y = &mut num; // immutable borrow out of scope
-    // assert_eq!(10, plus_num(5));
-
-    let nums = vec!(1,2,3);
-    let takes_nums = || nums; // Vec<i32> not implements Copy Trait, nums is moved(as return parameter)
-    // println!("{:?}", nums); // error: can not access a moved variable
-
-    let num = 5;
-    let owns_num = move|x: i32| x + num; // i32 implements Copy Trait, num is copied.
-    println!("{} {}", num, owns_num(1)); // num still owns value
-
-    let mut num = 5;
-    { let mut add_num = |x: i32| num += x; add_num(5); }
-    assert_eq!(10, num); // same object
-
-    let mut num = 5;
-    { let mut add_num = move |x: i32| num += x; add_num(5); }
-    assert_eq!(5, num); // different object
+    let mut v: Vec<usize> = vec![];
+    push_1m(&mut v, 5_000_000);
+    let mut v: Vec<usize> = vec![];
+    v.reserve(5_000_000); // pre-allocate space
+    push_1m(&mut v, 5_000_000);
   }
 
   {
-    // foo()
-    // mod foo {
-    //   pub trait Fn<Args> : FnMut<Args> { // &self
-    //       extern "rust-call" fn call(&self, args: Args) -> Self::Output;
-    //   }
-    //   pub trait FnMut<Args> : FnOnce<Args> { // &mut self
-    //       extern "rust-call" fn call_mut(&mut self, args: Args) -> Self::Output;
-    //   }
-    //   pub trait FnOnce<Args> { // self
-    //       type Output;
-    //       extern "rust-call" fn call_once(self, args: Args) -> Self::Output;
-    //   }
-    // }
+    // Key type: derive(PartialEq, Eq, Hash)
+    // 1, Key1 == Key2, Hash(Key1) == Hash(Key2)
+    // 2, Hash(Key) do not change Key value, (take cares of Cell/RefCell)
+    // 3, avoid: Key1 != Key2, Hash(Key1) == Hash(Key2)
+    use std::collections::HashMap;
 
-    fn call_with_one<F>(some_closure: F) -> i32 // static dispatch
-    where F: Fn(i32) -> i32 {
-      some_closure(1)
-    }
-    let answer = call_with_one(|x| x + 2);
-    assert_eq!(3, answer);
+    let mut come_from: HashMap<&str, &str> = HashMap::new();
+    come_from.insert("WaySLOG", "HeBei");
+    come_from.insert("Marisa", "U.S.");
+    come_from.insert("Mike", "HuoGuo");
 
-    fn call_with_one1<F>(some_closure: &F) -> i32 // dynamic dispatch
-    where F: Fn(i32) -> i32 {
-      some_closure(1)
-    }   
-    let answer = call_with_one1(&|x| x + 2);
-    assert_eq!(3, answer);
+    if !come_from.contains_key("elton") {
+      println!("Oh, 我们查到了{}个人，但是可怜的Elton猫还是无家可归", come_from.len());
+    }
 
-    fn call_with_one2(some_closure: &dyn Fn(i32)->i32) -> i32 {
-      some_closure(1)
-    }
-    fn add_one(i: i32) -> i32 {
-      i+1
-    }
-    let f = add_one;
-    // let answer = call_with_one2(&f);
-    let answer = call_with_one2(&add_one);
-    assert_eq!(2, answer);
+    come_from.remove("Mike");
+    println!("Mike猫的家乡不是火锅！不是火锅！不是火锅！虽然好吃！");
 
-    // fn factory() -> (Fn(i32)->i32) { // error: return parameter size not known
-    // fn factory() -> &dyn (Fn(i32)->i32) { // error: return parameter haven't explict lifetime
-    // fn factory() -> &'static dyn (Fn(i32)->i32) { // error: an object can be set to a static lifetime directly
-    fn factory() -> Box<dyn (Fn(i32)->i32)> { // parameter in heap
-      let num = 5;
-      // |x| x+num // error: not a reference type
-      // Box::new(|x|x+num) // error: num is borrowed
-      Box::new(move|x|x+num)
+    let who = ["MoGu", "Marisa"];
+    for person in &who {
+      match come_from.get(person) {
+        Some(location) => println!("{} 来自: {}", person, location),
+        None => println!("{} 也无家可归啊.", person),
+      }
     }
-    let f = factory();
-    let answer = f(1);
-    assert_eq!(6, answer);
+
+    println!("那么，所有人呢？");
+    for (name, location) in &come_from {
+      println!("{}来自: {}", name, location);
+    }
+
+    // python2: char counter
+    // 
+    // val = {}
+    // for c in "abcdefasdasdawe":
+    //     val[c] = 1 + val.setdefault(c, 0)
+    // print val
+
+    let mut letters: HashMap<char, i32> = HashMap::new();
+    for ch in "a short treatise on fungi".chars() {
+      let counter = letters.entry(ch).or_insert(0);
+      *counter += 1;
+    }
+    assert_eq!(letters[&'s'], 2);
+    assert_eq!(letters[&'t'], 3);
+    assert_eq!(letters[&'u'], 1);
+    assert_ne!(letters.get(&'s'), None);
   }
 }
