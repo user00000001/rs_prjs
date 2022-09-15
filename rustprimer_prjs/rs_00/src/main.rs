@@ -3,101 +3,95 @@ non_upper_case_globals, non_snake_case)]
 
 fn main() {
   {
-    let mut v1: Vec<i32> = Vec::new();
-    // let mut v2 = Vec::new::<i32>(); // error: new function has not implemented with generic
-    let mut v2 = (0i32..5).collect::<Vec<i32>>();
-
-    let v: Vec<i32> = vec![];
-    let v = vec!(1,2,3);
-    let v = vec![1,2,3];
-    // let mut temp = Vec::new();
-    // temp.push(1);
-    // temp.push(2);
-    // temp.push(3);
-    // let v = temp;
-
-    let v = vec![0; 10];
-
-    let v: Vec<_> = (1..5).collect(); // Vec implements FromIterator trait
-
-    let a = vec!(1,2,3);
-    assert_eq!(a[1usize], 2); // Vec implements Index/IndexMut trait
-
-    let mut v = vec!(1,2,3);
-    assert_eq!(v.get(1), Some(&2)); // get or get_mut return reference
-    assert_eq!(v.get_mut(3), None);
-
-    let mut v = vec![1,2,3];
-    for i in &v {} // immutable reference
-    for i in &mut v {} // mutable reference
-    for i in v {} // i take the element ownnership from v
-  }
-
-  {
-    use std::time;
-    
-    fn push_1m(v: &mut Vec<usize>, total: usize) {
-      let e = time::SystemTime::now();
-      for i in 1..total {
-        v.push(i);
-      }
-      let ed = time::SystemTime::now();
-      println!("time spend: {:?}", ed.duration_since(e).unwrap());
+    for i in 1..10 { // 1..10: iterator into_iter iterator, then invoke iterator next function
+      println!("{}", i);
     }
-    let mut v: Vec<usize> = vec![];
-    push_1m(&mut v, 5_000_000);
-    let mut v: Vec<usize> = vec![];
-    v.reserve(5_000_000); // pre-allocate space
-    push_1m(&mut v, 5_000_000);
+
+    let values = vec!(1,3,5); // Vec does not implement Iterator, but IntoIterator
+    for x in values {
+      println!("{}", x);
+    }
+    // Iterator: IntoIterator
+    // {
+    //   let result = match IntoIterator::into_iter(values) { // check IntoIterator first: into_iter
+    //     mut iter => loop {
+    //       match iter.next() { // check Iterator last: next
+    //         Some(x) => println!("{}", x),
+    //         None => break,
+    //       }
+    //     },
+    //   };
+    //   result
+    // }
+    let inf_seq = (1..).into_iter(); // iterator is lazy, do not apply collect or fold methods
+    for i in inf_seq.take(10) {
+      println!("{}", i);
+    }
   }
 
   {
-    // Key type: derive(PartialEq, Eq, Hash)
-    // 1, Key1 == Key2, Hash(Key1) == Hash(Key2)
-    // 2, Hash(Key) do not change Key value, (take cares of Cell/RefCell)
-    // 3, avoid: Key1 != Key2, Hash(Key1) == Hash(Key2)
+    // let v = (1..20).collect(); // error: need type for FromIterator
+    let v: Vec<_> = (1..20).collect(); // explict type of value
+    let v = (1..20).collect::<Vec<_>>(); // explict type of method
+
+    let r = (1..20).fold(1u64, |mul, x| mul*x); // MapReduce: reduce function
+    println!("{}", r);
+    let m: Vec<_> = (1..20).map(|x|x+1)
+    .collect(); // map function is lazy
+    println!("{:?}", m);
+    let f: Vec<_> = (1..20).filter(|x| x%2 == 0)
+    .collect(); // filter function is lazy too
+    println!("{:?}", f);
+
+    let v = vec!(1,2,3,4,5,6);
+    let v_take = v.iter()
+      .cloned()
+      .take(2)
+      .collect::<Vec<_>>();
+    assert_eq!(v_take, vec![1,2]);
+
+    let v_skip: Vec<_> = v.iter()
+      .cloned()
+      .skip(2)
+      .collect();
+    assert_eq!(v_skip, vec!(3,4,5,6));
+
     use std::collections::HashMap;
+    let names = vec!["WaySLOG", "Mike", "Elton"];
+    let scores = vec![60,80,100];
+    let score_map: HashMap<_, _> = names.iter()
+      .zip(scores.iter())
+      .collect();
+    println!("{:?}", score_map);
 
-    let mut come_from: HashMap<&str, &str> = HashMap::new();
-    come_from.insert("WaySLOG", "HeBei");
-    come_from.insert("Marisa", "U.S.");
-    come_from.insert("Mike", "HuoGuo");
+    let v = vec![1u64, 2, 3, 4, 5, 6];
+    let val = v.iter()
+      .enumerate()
+      .filter(|&(idx,_)|idx%2 == 0)
+      .map(|(idx,val)|val)
+      .fold(0u64, |sum, acm| sum + acm);
+    println!("{}", val);
+    let val = v.iter()
+      .enumerate()
+      .filter(|&(idx,_)|idx%2 == 0)
+      .unzip::<usize,&u64,Vec<usize>, Vec<&u64>>().1; // get only values
+    println!("{:?}", val);
+    let val: (Vec<usize>, Vec<&u64>) = v.iter()
+      .enumerate()
+      .filter(|&(idx,_)|idx%2 == 0)
+      .unzip(); // get only values
+    println!("{:?}", val.1);
 
-    if !come_from.contains_key("elton") {
-      println!("Oh, 我们查到了{}个人，但是可怜的Elton猫还是无家可归", come_from.len());
+    // find()/position() -> Option<Item>/Option<usize>
+    // all()/any() -> bool
+    // max()/min() -> bool
+  }
+
+  {
+    let v = (0u32..).into_iter();
+    let v1 = v.take(1000).filter(|i| (i/100).pow(3)+ ((i%100)/10).pow(3) + (i%10).pow(3) == *i).filter(|i|i%10 == 0).collect::<Vec<u32>>();
+    for i in v1 {
+      println!("{}^3 + {}^3 + {}^3 = {}", i/100, i%100/10, i%10, i);
     }
-
-    come_from.remove("Mike");
-    println!("Mike猫的家乡不是火锅！不是火锅！不是火锅！虽然好吃！");
-
-    let who = ["MoGu", "Marisa"];
-    for person in &who {
-      match come_from.get(person) {
-        Some(location) => println!("{} 来自: {}", person, location),
-        None => println!("{} 也无家可归啊.", person),
-      }
-    }
-
-    println!("那么，所有人呢？");
-    for (name, location) in &come_from {
-      println!("{}来自: {}", name, location);
-    }
-
-    // python2: char counter
-    // 
-    // val = {}
-    // for c in "abcdefasdasdawe":
-    //     val[c] = 1 + val.setdefault(c, 0)
-    // print val
-
-    let mut letters: HashMap<char, i32> = HashMap::new();
-    for ch in "a short treatise on fungi".chars() {
-      let counter = letters.entry(ch).or_insert(0);
-      *counter += 1;
-    }
-    assert_eq!(letters[&'s'], 2);
-    assert_eq!(letters[&'t'], 3);
-    assert_eq!(letters[&'u'], 1);
-    assert_ne!(letters.get(&'s'), None);
   }
 }
