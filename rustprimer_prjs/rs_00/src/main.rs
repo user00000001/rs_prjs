@@ -1,218 +1,268 @@
 #![allow(unused, deprecated, ellipsis_inclusive_range_patterns,
 non_upper_case_globals, non_snake_case)]
 
-mod aaa {
-  const X: i32 = 0;
-  pub fn print_aaa() {
-    println!("{}", 42);
+fn main() {
+  {
+    fn guess(n: i32) -> bool {
+      if n < 1 || n > 10 {
+        panic!("Invalid number: {}", n);
+      }
+      n == 5
+    }
+    // guess(11); // panic, thread or process exits.
+    guess(2);
+
+    // enum Option<T> {
+    //   None,
+    //   Some(T),
+    // }
+    fn find(haystack: &str, needle: char) -> Option<usize> {
+      for (offset, c) in haystack.char_indices() {
+        if c == needle {
+          return Some(offset);
+        }
+      }
+      None
+    }
+    let file_name = "foobar.rs";
+    match find(file_name, '.') {
+      Some(i) => println!("File extension: {}", &file_name[i+1..]),
+      None => println!("No file extension found."),
+    }
+
+    // impl<T> Option<T> {
+    //   fn unwrap(self) -> T {
+    //     match self {
+    //       Option::Some(val) => val,
+    //       Option::None =>
+    //         panic!("called `Option::unwrap()` on a `None` value"),
+    //     }
+    //   }
+    // }
+    println!("{}", find(file_name, '.').unwrap());
+
+    fn extension_explicit(file_name: &str) -> Option<&str> {
+      match find(file_name, '.') {
+        None => None,
+        Some(i) => Some(&file_name[i+1..]),
+      }
+    }
+    match extension_explicit("foo.rs") {
+      None => println!("no extention"),
+      Some(ext) => assert_eq!(ext, "rs"),
+    }
+
+    // fn map<F, T, A>(option: Option<T>, f: F) -> Option<A> where F: FnOnce(T) -> A {
+    //     match option {
+    //         None => None,
+    //         Some(value) => Some(f(value)),
+    //     }
+    // }
+    fn extension(file_name: &str) -> Option<&str> {
+      find(file_name, '.').map(|i|&file_name[i+1..]) // map is used to handle Option here
+    }
+    match extension("foo.rs") {
+      None => println!("no extention"),
+      Some(ext) => assert_eq!(ext, "rs"),
+    }
+
+    // fn unwrap_or<T>(option: Option<T>, default: T) -> T {
+    //     match option {
+    //         None => default,
+    //         Some(value) => value,
+    //     }
+    // }
+    assert_eq!(extension("foo.rs").unwrap_or("rs"), "rs"); // unwrap_or: provide a default value
+    assert_eq!(extension("foo").unwrap_or("rs"), "rs");
+
+    // fn and_then<F, T, A>(option: Option<T>, f: F) -> Option<A>
+    //     where F: FnOnce(T) -> Option<A> {
+    //     match option {
+    //         None => None,
+    //         Some(value) => f(value),
+    //     }
+    // }
+
+    use std::path::Path;
+    fn file_name_fn(file_path: &str) -> Option<&str> {
+      let path = Path::new(file_path);
+      if let Some(fn_) = path.file_name() {
+        return fn_.to_str()
+      }
+      None
+    }
+    fn file_path_ext(file_path: &str) -> Option<&str> {
+      file_name_fn(file_path).and_then(extension) // and_then: simlar to map above
+    }
+    assert_eq!(file_path_ext("foo.rs"), Some("rs"));
+    assert_eq!(file_path_ext("foo"), None);
   }
 
-  mod bbb {
-    fn print_bbb() {
-      println!("{}", 37);
+  {
+    // Result
+    // 
+    // enum Result<T, E> {
+    //     Ok(T),
+    //     Err(E),
+    // }
+    //
+    // type Option<T> = Result<T, ()>;
+    //
+    // impl<T, E: ::std::fmt::Debug> Result<T, E> {
+    //     fn unwrap(self) -> T {
+    //         match self {
+    //             Result::Ok(val) => val,
+    //             Result::Err(err) =>
+    //               panic!("called `Result::unwrap()` on an `Err` value: {:?}", err),
+    //         }
+    //     }
+    // }
+
+    fn double_number(number_str: &str) -> i32 {
+      2 * number_str.parse::<i32>().unwrap()
+    }
+    let n: i32 = double_number("10");
+    assert_eq!(n, 20);
+
+    // impl str {
+    //   fn parse<F: FromStr>(&self) -> Result<F, F::Err>;
+    // }
+    // pub trait FromStr {
+    //   type Err;
+    //   fn from_str(s: &str) -> Result<Self, Self::Err>;
+    // }
+    // impl FromStr for i32 {
+    //     type Err = ParseIntError;
+    //     fn from_str(src: &str) -> Result<i32, ParseIntError> {
+    //     }
+    // }
+    use std::num::ParseIntError;
+    fn double_number1(number_str: &str) -> Result<i32, ParseIntError> {
+      number_str.parse::<i32>().map(|n|n*2) // map handles value, then return value or return error 
+    }
+    match double_number1("10") {
+      Ok(n) => assert_eq!(n, 20),
+      Err(err) => println!("Error: {:?}", err),
+    }
+    // map_err
+    // or_else
+
+    use std::result;
+    type Result1<T> = result::Result<T, ParseIntError>; // alias
+    fn double_number2(number_str: &str) -> Result1<i32> {
+      unimplemented!();
+    }
+
+    // fn ok_or<T, E>(option: Option<T>, err: E) -> Result<T, E> { // convert option to result
+    //     match option {
+    //         Some(val) => Ok(val),
+    //         None => Err(err),
+    //     }
+    // }
+    use std::env;
+    fn double_arg(mut argv: env::Args) -> Result<i32, String> {
+      argv.nth(1)
+        .ok_or("Please give at least one argument".to_owned())
+        .and_then(|arg| arg.parse::<i32>().map_err(|err|err.to_string()))
+        .map(|n|2*n)
+    }
+    match double_arg(env::args()) {
+      Ok(n) => println!("{}", n),
+      Err(err) => println!("Error: {}", err),
+    }
+
+    // echo "100" > ../../target/foobar
+    use std::fs::File;
+    use std::io::Read;
+    use std::path::Path;
+    fn file_double<P: AsRef<Path>>(file_path: P) -> Result<i32, String> {
+      File::open(file_path)
+        .map_err(|err|err.to_string())
+        .and_then(|mut file|{
+          let mut contents = String::new();
+          file.read_to_string(&mut contents)
+            .map_err(|err|err.to_string())
+            .map(|_|contents)
+        })
+        .and_then(|contents|{
+          contents.trim().parse::<i32>()
+            .map_err(|err|err.to_string())
+        })
+        .map(|n|2*n)
+    }
+    match file_double("../../target/foobar") {
+      Ok(n) => println!("{}", n),
+      Err(err) => println!("Error: {}", err),
+    }
+
+    // using match & if let instead
+    fn file_double1<P: AsRef<Path>>(file_path: P) -> Result<i32, String> {
+      let mut file = match File::open(file_path) {
+        Ok(file) => file,
+        Err(err) => return Err(err.to_string()),
+      };
+      let mut contents = String::new();
+      if let Err(err) = file.read_to_string(&mut contents) {
+        return Err(err.to_string());
+      }
+      let n: i32 = match contents.trim().parse() {
+        Ok(n) => n,
+        Err(err) => return Err(err.to_string()),
+      };
+      Ok(2*n)
+    }
+    match file_double1("../../target/foobar") {
+      Ok(n) => println!("{}", n),
+      Err(err) => println!("Error: {}", err),
+    }
+
+    // macro_rules! try { // using ? instead r#try! macro
+    //   ($e:expr) => (match $e {
+    //     Ok(val) => val,
+    //     Err(err) => return Err(::std::convert::From::from(err)),
+    //   });
+    // }
+    use std::error::Error;
+    fn file_double2<P: AsRef<Path>>(file_path: P) -> Result<i32, Box<dyn Error>> {
+      let mut file = r#try!(File::open(file_path));
+      let mut contents = String::new();
+      file.read_to_string(&mut contents)?;
+      let n = r#try!(contents.trim().parse::<i32>());
+      Ok(2 * n)
+    }
+    match file_double2("../../target/foobar") {
+      Ok(n) => println!("{}", n),
+      Err(err) => println!("Error: {}", err),
+    }
+
+    // self-define Error: implements From trait for convert to self-define Error
+    use std::io;
+    use std::num;
+    #[derive(Debug)]
+    enum CliError {
+      Io(io::Error),
+      Parse(num::ParseIntError)
+    }
+    impl From<io::Error> for CliError {
+      fn from(err: io::Error) -> CliError {
+        CliError::Io(err)
+      }
+    }
+    impl From<num::ParseIntError> for CliError {
+      fn from(err: num::ParseIntError) -> CliError {
+        CliError::Parse(err)
+      }
+    }
+    fn file_double_verbose<P: AsRef<Path>>(file_path: P) -> Result<i32, CliError> {
+      let mut file = r#try!(File::open(file_path).map_err(CliError::Io));
+      let mut contents = String::new();
+      r#try!(file.read_to_string(&mut contents).map_err(CliError::Io));
+      let n: i32 = r#try!(contents.trim().parse().map_err(CliError::Parse));
+      Ok(n * 2)
+    }
+    match file_double2("../../target/foobar") {
+      Ok(n) => println!("{}", n),
+      Err(err) => println!("Error: {}", err),
     }
   }
 }
-
-mod ccc {
-  pub fn print_ccc() {
-    println!("{}", 25);
-  }
-}
-
-mod ddd; // equal mostly: mod ddd { /* file content */ }
-
-mod a;
-use a::b::c::d;
-
-fn main() {
-  {
-    // cargo new --lib foo
-    //
-    // foo
-    // ├── Cargo.toml
-    // └── src
-    //     └── lib.rs // libary crate
-
-    // cargo new --bin foo
-    //
-    // foo
-    // ├── Cargo.toml
-    // └── src
-    //     └── main.rs // execute crate
-
-    aaa::print_aaa();
-    use ccc::print_ccc;
-    print_ccc();
-    use ddd::print_ddd;
-    print_ddd();
-  }
-
-  {
-    // 1. 优先查找xxx.rs 文件
-    //  i. main.rs、lib.rs、mod.rs中的mod xxx; 默认优先查找同级目录下的 xxx.rs 文件；
-    //  ii. 其他文件yyy.rs中的mod xxx;默认优先查找同级目录的yyy目录下的 xxx.rs 文件；
-    // 2. 如果 xxx.rs 不存在，则查找 xxx/mod.rs 文件，即 xxx 目录下的 mod.rs 文件。
-    d::print_ddd();
-
-    // self
-    // 
-    // self 在路径中，有两种意思：
-    // 1. use self::xxx 表示，加载当前模块中的 xxx。此时 self 可省略；
-    // 2. use xxx::{self, yyy}，表示，加载当前路径下模块 xxx 本身，以及模块 xxx 下的 yyy；
-
-    // super
-    // 
-    // super 表示，当前模块路径的上一级路径，可以理解成父模块。
-
-    // ::xxx::yyy
-    // 
-    // 引用根路径下的 xxx::yyy，这个根路径，指的是当前 crate 的根路径。
-
-    // use xxx::*;
-    // 
-    // 表示导入 xxx 模块下的所有可见 item（加了 pub 标识的 item）
-
-    // pub use
-    // 
-    // re-exporting deeply item to current path level
-    a::d::print_ddd();
-
-    // extern crate xxx;
-    // 
-    // 相当于引入了一个符号 xxx，后面可以直接以这个 xxx 为根引用这个 crate 中的 item
-    // use xxx::yyy::zzz;
-    // extern crate xxx as foo; // as: rename item
-    // use foo::yyy::zzz;
-  }
-
-  {
-    // Prelude: default import
-    // 
-    // std::marker::{Copy, Send, Sized, Sync}
-    // std::ops::{Drop, Fn, FnMut, FnOnce}
-    // std::mem::drop
-    // std::boxed::Box
-    // std::borrow::ToOwned
-    // std::clone::Clone
-    // std::cmp::{PartialEq, PartialOrd, Eq, Ord}
-    // std::convert::{AsRef, AsMut, Into, From}
-    // std::default::Default
-    // std::iter::{Iterator, Extend, IntoIterator, DoubleEndedIterator, ExactSizeIterator}
-    // std::option::Option::{self, Some, None}
-    // std::result::Result::{self, Ok, Err}
-    // std::slice::SliceConcatExt
-    // std::string::{String, ToString}
-    // std::vec::Vec
-    use std::prelude::*;
-    let v = v1::Box::new(10);
-  }
-
-  {
-    // pub(crate) item;
-    // 
-    // 来限制 item 只在当前 crate 中可用，在当前 crate 的其他子树中，可以通过 use + path 的语法来引用 item
-
-    // pub restricted 的使用
-    // 
-    // old: VISIBILITY ::= <empty> | `pub`
-    // new: VISIBILITY ::= <empty> | `pub` | `pub` `(` USE_PATH `)` | `pub` `(` `crate` `)`
-    // 1, pub 无明确指定意味着无限制；
-    // 2, pub(crate) 当前 crate 有效；
-    // 3, pub(in <path>) 在 <path> 表示的模块中有效。
-  }
-}
-
-// // Intent: `a1` exports `I`, `bar`, and `foo`, but nothing else.
-// pub mod a1 {
-//   pub const I: i32 = 3;
-//   // `semisecret` will be used "many" places within `a1`, but
-//   // is not meant to be exposed outside of `a1`.
-//   fn semisecret(x: i32) -> i32  { use self::b::c::J; x + J }
-//   pub fn bar(z: i32) -> i32 { semisecret(I) * z }
-//   pub fn foo(y: i32) -> i32 { semisecret(I) + y }
-//   mod b {
-//       mod c {
-//           const J: i32 = 4; // J is meant to be hidden from the outside world.
-//       }
-//   }
-// }
-
-// // Intent: `a1` exports `I`, `bar`, and `foo`, but nothing else.
-// pub mod a1 {
-//   pub const I: i32 = 3;
-//   // `semisecret` will be used "many" places within `a1`, but
-//   // is not meant to be exposed outside of `a1`.
-//   // (If we put `pub use` here, then *anyone* could access it.)
-//   use self::b::semisecret;
-//   pub fn bar(z: i32) -> i32 { semisecret(I) * z }
-//   pub fn foo(y: i32) -> i32 { semisecret(I) + y }
-//   mod b {
-//       pub use self::c::semisecret;
-//       mod c {
-//           const J: i32 = 4; // J is meant to be hidden from the outside world.
-//           pub fn semisecret(x: i32) -> i32  { x + J }
-//       }
-//   }
-// }
-
-// Intent: `a1` exports `I`, `bar`, and `foo`, but nothing else.
-pub mod a1 {
-  pub const I: i32 = 3;
-  // `semisecret` will be used "many" places within `a1`, but
-  // is not meant to be exposed outside of `a1`.
-  // (`pub use` would be *rejected*; see Note 1 below)
-  use self::b::semisecret;
-  pub fn bar(z: i32) -> i32 { semisecret(I) * z }
-  pub fn foo(y: i32) -> i32 { semisecret(I) + y }
-  mod b {
-      pub(in crate::a1) use self::c::semisecret;
-      mod c {
-          const J: i32 = 4; // J is meant to be hidden from the outside world.
-          // `pub(in a1)` means "usable within hierarchy of `mod a1`, but not
-          // elsewhere."
-          pub(in crate::a1) fn semisecret(x: i32) -> i32  { x + J }
-      }
-  }
-}
-
-mod a2 {
-  #[derive(Default)]
-  struct Priv(i32);
-  pub mod b {
-      use crate::a2::Priv as Priv_a;
-      #[derive(Default)]
-      pub struct F {
-          pub    x: i32,
-                 y: Priv_a,
-          pub(in crate::a2) z: Priv_a,
-      }
-      #[derive(Default)]
-      pub struct G(pub i32, Priv_a, pub(in crate::a2) Priv_a);
-      // ... accesses to F.{x,y,z} ...
-      // ... accesses to G.{0,1,2} ...
-  }
-  // ... accesses to F.{x,z} ...
-  // ... accesses to G.{0,2} ...
-}
-mod k {
-  use crate::a2::b::{F, G};
-  // ... accesses to F and F.x ...
-  // ... accesses to G and G.0 ...
-}
-
-// crate: c1
-pub mod a3 {
-  struct Priv(i32);
-  pub(crate) struct R { pub y: i32, z: Priv } // ok: field allowed to be more public
-  pub        struct S { pub y: i32, z: Priv }
-  // pub fn to_r_bad(s: S) -> R { R {y:1, z:Priv(1)} } //~ ERROR: `R` restricted solely to this crate
-  pub(crate) fn to_r(s: S) -> R { R { y: s.y, z: s.z } } // ok: restricted to crate
-}
-use crate::a3::{R, S}; // ok: `a::R` and `a::S` are both visible
-// pub use crate::a3::R as ReexportAttempt; //~ ERROR: `a::R` restricted solely to this crate
-
-// crate: c2
-// extern crate c1;
-// use c1::a::S; // ok: `S` is unrestricted
-// use c1::a::R; //~ ERROR: `c1::a::R` not visible outside of its crate
