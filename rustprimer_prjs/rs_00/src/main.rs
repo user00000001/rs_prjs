@@ -1,97 +1,218 @@
 #![allow(unused, deprecated, ellipsis_inclusive_range_patterns,
 non_upper_case_globals, non_snake_case)]
 
-fn main() {
-  {
-    for i in 1..10 { // 1..10: iterator into_iter iterator, then invoke iterator next function
-      println!("{}", i);
-    }
-
-    let values = vec!(1,3,5); // Vec does not implement Iterator, but IntoIterator
-    for x in values {
-      println!("{}", x);
-    }
-    // Iterator: IntoIterator
-    // {
-    //   let result = match IntoIterator::into_iter(values) { // check IntoIterator first: into_iter
-    //     mut iter => loop {
-    //       match iter.next() { // check Iterator last: next
-    //         Some(x) => println!("{}", x),
-    //         None => break,
-    //       }
-    //     },
-    //   };
-    //   result
-    // }
-    let inf_seq = (1..).into_iter(); // iterator is lazy, do not apply collect or fold methods
-    for i in inf_seq.take(10) {
-      println!("{}", i);
-    }
+mod aaa {
+  const X: i32 = 0;
+  pub fn print_aaa() {
+    println!("{}", 42);
   }
 
-  {
-    // let v = (1..20).collect(); // error: need type for FromIterator
-    let v: Vec<_> = (1..20).collect(); // explict type of value
-    let v = (1..20).collect::<Vec<_>>(); // explict type of method
-
-    let r = (1..20).fold(1u64, |mul, x| mul*x); // MapReduce: reduce function
-    println!("{}", r);
-    let m: Vec<_> = (1..20).map(|x|x+1)
-    .collect(); // map function is lazy
-    println!("{:?}", m);
-    let f: Vec<_> = (1..20).filter(|x| x%2 == 0)
-    .collect(); // filter function is lazy too
-    println!("{:?}", f);
-
-    let v = vec!(1,2,3,4,5,6);
-    let v_take = v.iter()
-      .cloned()
-      .take(2)
-      .collect::<Vec<_>>();
-    assert_eq!(v_take, vec![1,2]);
-
-    let v_skip: Vec<_> = v.iter()
-      .cloned()
-      .skip(2)
-      .collect();
-    assert_eq!(v_skip, vec!(3,4,5,6));
-
-    use std::collections::HashMap;
-    let names = vec!["WaySLOG", "Mike", "Elton"];
-    let scores = vec![60,80,100];
-    let score_map: HashMap<_, _> = names.iter()
-      .zip(scores.iter())
-      .collect();
-    println!("{:?}", score_map);
-
-    let v = vec![1u64, 2, 3, 4, 5, 6];
-    let val = v.iter()
-      .enumerate()
-      .filter(|&(idx,_)|idx%2 == 0)
-      .map(|(idx,val)|val)
-      .fold(0u64, |sum, acm| sum + acm);
-    println!("{}", val);
-    let val = v.iter()
-      .enumerate()
-      .filter(|&(idx,_)|idx%2 == 0)
-      .unzip::<usize,&u64,Vec<usize>, Vec<&u64>>().1; // get only values
-    println!("{:?}", val);
-    let val: (Vec<usize>, Vec<&u64>) = v.iter()
-      .enumerate()
-      .filter(|&(idx,_)|idx%2 == 0)
-      .unzip(); // get only values
-    println!("{:?}", val.1);
-
-    // find()/position() -> Option<Item>/Option<usize>
-    // all()/any() -> bool
-    // max()/min() -> bool
-  }
-
-  {
-    let v = (0u32..).into_iter();
-    let v1 = v.take(1000).filter(|i| (i/100).pow(3)+ ((i%100)/10).pow(3) + (i%10).pow(3) == *i).filter(|i|i%10 == 0).collect::<Vec<u32>>();
-    for i in v1 {
-      println!("{}^3 + {}^3 + {}^3 = {}", i/100, i%100/10, i%10, i);
+  mod bbb {
+    fn print_bbb() {
+      println!("{}", 37);
     }
   }
 }
+
+mod ccc {
+  pub fn print_ccc() {
+    println!("{}", 25);
+  }
+}
+
+mod ddd; // equal mostly: mod ddd { /* file content */ }
+
+mod a;
+use a::b::c::d;
+
+fn main() {
+  {
+    // cargo new --lib foo
+    //
+    // foo
+    // ├── Cargo.toml
+    // └── src
+    //     └── lib.rs // libary crate
+
+    // cargo new --bin foo
+    //
+    // foo
+    // ├── Cargo.toml
+    // └── src
+    //     └── main.rs // execute crate
+
+    aaa::print_aaa();
+    use ccc::print_ccc;
+    print_ccc();
+    use ddd::print_ddd;
+    print_ddd();
+  }
+
+  {
+    // 1. 优先查找xxx.rs 文件
+    //  i. main.rs、lib.rs、mod.rs中的mod xxx; 默认优先查找同级目录下的 xxx.rs 文件；
+    //  ii. 其他文件yyy.rs中的mod xxx;默认优先查找同级目录的yyy目录下的 xxx.rs 文件；
+    // 2. 如果 xxx.rs 不存在，则查找 xxx/mod.rs 文件，即 xxx 目录下的 mod.rs 文件。
+    d::print_ddd();
+
+    // self
+    // 
+    // self 在路径中，有两种意思：
+    // 1. use self::xxx 表示，加载当前模块中的 xxx。此时 self 可省略；
+    // 2. use xxx::{self, yyy}，表示，加载当前路径下模块 xxx 本身，以及模块 xxx 下的 yyy；
+
+    // super
+    // 
+    // super 表示，当前模块路径的上一级路径，可以理解成父模块。
+
+    // ::xxx::yyy
+    // 
+    // 引用根路径下的 xxx::yyy，这个根路径，指的是当前 crate 的根路径。
+
+    // use xxx::*;
+    // 
+    // 表示导入 xxx 模块下的所有可见 item（加了 pub 标识的 item）
+
+    // pub use
+    // 
+    // re-exporting deeply item to current path level
+    a::d::print_ddd();
+
+    // extern crate xxx;
+    // 
+    // 相当于引入了一个符号 xxx，后面可以直接以这个 xxx 为根引用这个 crate 中的 item
+    // use xxx::yyy::zzz;
+    // extern crate xxx as foo; // as: rename item
+    // use foo::yyy::zzz;
+  }
+
+  {
+    // Prelude: default import
+    // 
+    // std::marker::{Copy, Send, Sized, Sync}
+    // std::ops::{Drop, Fn, FnMut, FnOnce}
+    // std::mem::drop
+    // std::boxed::Box
+    // std::borrow::ToOwned
+    // std::clone::Clone
+    // std::cmp::{PartialEq, PartialOrd, Eq, Ord}
+    // std::convert::{AsRef, AsMut, Into, From}
+    // std::default::Default
+    // std::iter::{Iterator, Extend, IntoIterator, DoubleEndedIterator, ExactSizeIterator}
+    // std::option::Option::{self, Some, None}
+    // std::result::Result::{self, Ok, Err}
+    // std::slice::SliceConcatExt
+    // std::string::{String, ToString}
+    // std::vec::Vec
+    use std::prelude::*;
+    let v = v1::Box::new(10);
+  }
+
+  {
+    // pub(crate) item;
+    // 
+    // 来限制 item 只在当前 crate 中可用，在当前 crate 的其他子树中，可以通过 use + path 的语法来引用 item
+
+    // pub restricted 的使用
+    // 
+    // old: VISIBILITY ::= <empty> | `pub`
+    // new: VISIBILITY ::= <empty> | `pub` | `pub` `(` USE_PATH `)` | `pub` `(` `crate` `)`
+    // 1, pub 无明确指定意味着无限制；
+    // 2, pub(crate) 当前 crate 有效；
+    // 3, pub(in <path>) 在 <path> 表示的模块中有效。
+  }
+}
+
+// // Intent: `a1` exports `I`, `bar`, and `foo`, but nothing else.
+// pub mod a1 {
+//   pub const I: i32 = 3;
+//   // `semisecret` will be used "many" places within `a1`, but
+//   // is not meant to be exposed outside of `a1`.
+//   fn semisecret(x: i32) -> i32  { use self::b::c::J; x + J }
+//   pub fn bar(z: i32) -> i32 { semisecret(I) * z }
+//   pub fn foo(y: i32) -> i32 { semisecret(I) + y }
+//   mod b {
+//       mod c {
+//           const J: i32 = 4; // J is meant to be hidden from the outside world.
+//       }
+//   }
+// }
+
+// // Intent: `a1` exports `I`, `bar`, and `foo`, but nothing else.
+// pub mod a1 {
+//   pub const I: i32 = 3;
+//   // `semisecret` will be used "many" places within `a1`, but
+//   // is not meant to be exposed outside of `a1`.
+//   // (If we put `pub use` here, then *anyone* could access it.)
+//   use self::b::semisecret;
+//   pub fn bar(z: i32) -> i32 { semisecret(I) * z }
+//   pub fn foo(y: i32) -> i32 { semisecret(I) + y }
+//   mod b {
+//       pub use self::c::semisecret;
+//       mod c {
+//           const J: i32 = 4; // J is meant to be hidden from the outside world.
+//           pub fn semisecret(x: i32) -> i32  { x + J }
+//       }
+//   }
+// }
+
+// Intent: `a1` exports `I`, `bar`, and `foo`, but nothing else.
+pub mod a1 {
+  pub const I: i32 = 3;
+  // `semisecret` will be used "many" places within `a1`, but
+  // is not meant to be exposed outside of `a1`.
+  // (`pub use` would be *rejected*; see Note 1 below)
+  use self::b::semisecret;
+  pub fn bar(z: i32) -> i32 { semisecret(I) * z }
+  pub fn foo(y: i32) -> i32 { semisecret(I) + y }
+  mod b {
+      pub(in crate::a1) use self::c::semisecret;
+      mod c {
+          const J: i32 = 4; // J is meant to be hidden from the outside world.
+          // `pub(in a1)` means "usable within hierarchy of `mod a1`, but not
+          // elsewhere."
+          pub(in crate::a1) fn semisecret(x: i32) -> i32  { x + J }
+      }
+  }
+}
+
+mod a2 {
+  #[derive(Default)]
+  struct Priv(i32);
+  pub mod b {
+      use crate::a2::Priv as Priv_a;
+      #[derive(Default)]
+      pub struct F {
+          pub    x: i32,
+                 y: Priv_a,
+          pub(in crate::a2) z: Priv_a,
+      }
+      #[derive(Default)]
+      pub struct G(pub i32, Priv_a, pub(in crate::a2) Priv_a);
+      // ... accesses to F.{x,y,z} ...
+      // ... accesses to G.{0,1,2} ...
+  }
+  // ... accesses to F.{x,z} ...
+  // ... accesses to G.{0,2} ...
+}
+mod k {
+  use crate::a2::b::{F, G};
+  // ... accesses to F and F.x ...
+  // ... accesses to G and G.0 ...
+}
+
+// crate: c1
+pub mod a3 {
+  struct Priv(i32);
+  pub(crate) struct R { pub y: i32, z: Priv } // ok: field allowed to be more public
+  pub        struct S { pub y: i32, z: Priv }
+  // pub fn to_r_bad(s: S) -> R { R {y:1, z:Priv(1)} } //~ ERROR: `R` restricted solely to this crate
+  pub(crate) fn to_r(s: S) -> R { R { y: s.y, z: s.z } } // ok: restricted to crate
+}
+use crate::a3::{R, S}; // ok: `a::R` and `a::S` are both visible
+// pub use crate::a3::R as ReexportAttempt; //~ ERROR: `a::R` restricted solely to this crate
+
+// crate: c2
+// extern crate c1;
+// use c1::a::S; // ok: `S` is unrestricted
+// use c1::a::R; //~ ERROR: `c1::a::R` not visible outside of its crate
