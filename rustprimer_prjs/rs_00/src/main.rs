@@ -2,39 +2,220 @@
 non_upper_case_globals, non_snake_case)]
 
 fn main() -> Result<(), std::io::Error> {
-  // Send / Sync
+  // concurrent / parallel / multiple threads
+  use std::thread;
+  use rand::Rng;
+  use std::collections::HashMap;
   {
-    // included in std::marker, relative to threads safety, a kind of contraint, no method defined, no associated items
+    let new_thread = thread::spawn(move||{ // FnOnce
+      println!("I am a new thread");
+    });
+    new_thread.join().unwrap();
 
-    // 如果 T: Send，那么将 T 传到另一个线程中时（按值传送），不会导致数据竞争或其它不安全情况。
-    // Send 是对象可以安全发送到另一个执行体中；
-    // Send 使被发送对象可以和产生它的线程解耦，防止原线程将此资源释放后，在目标线程中使用出错（use after free）。
+    let new_thread_result = thread::Builder::new()
+      .name("thread1".to_string()) // set name
+      .stack_size(4*1024*1024).spawn(move||{ // set thread stack size
+        println!("I am thread1.");
+      });
+      new_thread_result.unwrap() // build may failed
+        .join().unwrap();
+    
+    let new_thread = thread::spawn(move||{
+      loop {
+        print!("\rI am a new thread.");
+      }
+    });
+    // new_thread.join().unwrap(); // main thread exits, children threads exit too
 
-    // 如果 T: Sync，那么将 &T 传到另一个线程中时，不会导致数据竞争或其它不安全情况。
-    // Sync 是可以被同时多个执行体访问而不出错；
-    // Sync 防止的是竞争；
+    let new_thread = thread::spawn(move||{
+      thread::spawn(move||{
+        loop {
+          print!("\rI am a new thread.");
+        }
+      });
+    });
+    new_thread.join().unwrap();
+    println!("Child thread is finish!"); // parent thread exits, children threads may not exits
+    thread::sleep_ms(100);
 
-    // 推论：
-    // T: Sync 意味着 &T: Send；
-    // Sync + Copy = Send；
-    // 当 T: Send 时，可推导出 &mut T: Send；
-    // 当 T: Sync 时，可推导出 &mut T: Sync；
-    // 当 &mut T: Send 时，不能推导出 T: Send；
-    // （注：T, &T, &mut T，Box<T> 等都是不同的类型）
+    let mut goals: HashMap<usize, (i32, String)> = HashMap::new();
+    for i in (1..=100usize) {
+      let mut rng = rand::thread_rng();
+      let x = rng.gen_range(0..=100);
+      let v = thread::spawn(move||{
+        match x {
+          x if x >= 90 => String::from("A"),
+          x if x >= 80 => String::from("B"),
+          x if x >= 70 => String::from("C"),
+          x if x >= 60 => String::from("D"),
+          _ => String::from("E"),
+        }
+      }).join().unwrap();
+      goals.insert(i, (x, v));
+    }
+    for i in 1..=100usize {
+      println!("{:>3}'s goal is {:<3}, rank: {}", i, goals[&i].0, goals[&i].1);
+    }
+  }
 
-    // 具体的类型：
+  use std::sync::mpsc; // Multiple Producers Single Consumer
+  use std::rc::Rc;
+  {
+    struct Student {
+      id: u32
+    }
+    // !Send contains:
+    //
+    // 1, *mut T / *const T
+    // 2, Rc / Weak
 
-    // 原始类型（比如： u8, f64），都是 Sync，都是 Copy，因此都是 Send；
-    // 只包含原始类型的复合类型，都是 Sync，都是 Copy，因此都是 Send；
-    // 当 T: Sync，Box<T>, Vec<T> 等集合类型是 Sync；
-    // 具有内部可变性的的指针，不是 Sync 的，比如 Cell, RefCell, UnsafeCell；
-    // Rc 不是 Sync。因为只要一做 &Rc<T> 操作，就会克隆一个新引用，它会以非原子性的方式修改引用计数，所以是不安全的；
-    // 被 Mutex 和 RWLock 锁住的类型 T: Send，是 Sync 的；
-    // 原始指针（*mut, *const）既不是 Send 也不是 Sync；
+    // let (tx, rx): (mpsc::Sender<Rc<Student>>, mpsc::Receiver<Rc<Student>>) = mpsc::channel(); // error: Rc<Student> not imples Send
+    let (tx, rx): (mpsc::Sender<i32>, mpsc::Receiver<i32>) = mpsc::channel();
+    thread::spawn(move||{
+      tx.send(1).unwrap(); // move tx to this thread, send i32 back to rx
+    });
+    println!("receive {}", rx.recv().unwrap());
 
-    // Rust 正是通过这两大武器：所有权和生命周期 + Send 和 Sync（本质上为类型系统）来为并发编程提供了安全可靠的基础设施。
-    // 使得程序员可以放心在其上构建稳健的并发模型。这也正是 Rust 的核心设计观的体现：内核只提供最基础的原语，真正的实现能
-    // 分离出去就分离出去。并发也是如此。
+    // self-define struct can send cross threads
+    #[derive(Debug)]
+    struct Student1<F> 
+      where F: Send + 'static 
+    {
+      id: Rc<F>,
+    }
+    // self guarantee safety
+    unsafe impl<F> Send for Student1<F> where F: Send + 'static {}
+    let (tx, rx): (mpsc::Sender<Student1<i32>>, mpsc::Receiver<Student1<i32>>) = mpsc::channel(); 
+    thread::spawn(move||{
+      let id_rc = Rc::new(0);
+      tx.send(Student1{id: id_rc}).unwrap(); 
+    });
+    println!("receive {:?}", rx.recv().unwrap());
+
+    const THREAD_COUNT: i32 = 2;
+    let (tx, rx): (mpsc::Sender<i32>, mpsc::Receiver<i32>) = mpsc::channel();
+    for id in 0..THREAD_COUNT {
+      let thread_tx = tx.clone(); // like Rc
+      thread::spawn(move||{
+        thread_tx.send(id+1).unwrap(); // no blocking, limitless capacity size
+        println!("send {}", id + 1);
+      });
+    }
+    thread::sleep_ms(2000);
+    println!("wake up");
+    for _ in 0..THREAD_COUNT {
+      println!("receive {}", rx.recv().unwrap()); // blocking, FIFO
+    }
+
+    let (tx, rx): (mpsc::SyncSender<i32>, mpsc::Receiver<i32>) = mpsc::sync_channel(0); // specified capacity size, 0 represents no cache
+    let new_thread = thread::spawn(move||{
+      println!("before send");
+      tx.send(1).unwrap(); // capacity size 0, blocking
+      println!("after send");
+    });
+    println!("before sleep");
+    thread::sleep_ms(5000);
+    println!("after sleep");
+    println!("receive {}", rx.recv().unwrap());
+    new_thread.join().unwrap();
+  }
+
+  use std::sync::Arc;
+  {
+    // shared memory: more data race
+    //
+    static mut VAR: i32 = 5; // const will inline to code
+    let new_thread = thread::spawn(move||{
+      unsafe { // self guarantee safety
+        println!("static value in new thread: {}", unsafe { VAR } );
+        VAR = VAR + 1 
+      };
+    });
+    new_thread.join().unwrap();
+    println!("static value in main thread: {}", unsafe { VAR } );
+
+    let var: Arc<i32> = Arc::new(5); // includes Box implement
+    let share_var = var.clone();
+    let new_thread = thread::spawn(move||{
+      println!("share value in new thread: {}, address: {:p}", share_var, &*share_var);
+    });
+    new_thread.join().unwrap();
+    println!("share value in main thread: {}, address: {:p}", var, &*var); // same object pointer address
+  }
+
+  use std::sync::{
+    Mutex, // methods: lock 
+    Condvar, // methods: wait, notify_one, notify_all
+  };
+  use std::sync::atomic::{
+    AtomicUsize, // AtomicBool, AtomicIsize, AtomicPtr
+    Ordering,
+  };
+  {
+    // condition variable
+    //
+    let pair = Arc::new((Mutex::new(false), Condvar::new()));
+    let pair2 = pair.clone();
+    thread::spawn(move||{
+      let &(ref lock, ref cvar) = &*pair2;
+      let mut started = lock
+        .lock() // require mutex guard lock, blocking
+        .unwrap(); // got mutex guard lock
+      *started = true;
+      cvar.notify_one();
+      println!("notify main thread");
+      drop(started); // release mutex guard lock
+    });
+    // Wait for the thread to start up?
+    let &(ref lock, ref cvar) = &*pair;
+    let mut started = lock.lock().unwrap(); // need to get mutex guard lock first
+    while !*started {
+      println!("before wait");
+      started = cvar.wait(started).unwrap(); // wait(started) consume/release mutex guard lock, return the mutex guard to get own mutex lock again
+      println!("after wait");
+    }
+
+    // atomic type: more effect
+    //
+    let var: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(5));
+    let share_var = var.clone();
+    let new_thread = thread::spawn(move||{
+      println!("share value in new thread: {}", share_var.load(Ordering::SeqCst));
+      share_var.store(9, Ordering::SeqCst);
+    });
+    new_thread.join().unwrap();
+    println!("share value in main thread: {}", var.load(Ordering::SeqCst));
+
+    // lock
+    // 
+    let var: Arc<Mutex<u32>> = Arc::new(Mutex::new(5));
+    let share_var = var.clone();
+    let new_thread = thread::spawn(move||{
+      let mut val = share_var.lock().unwrap();
+      println!("share value in new thread: {}", *val);
+      *val = 9;
+    });
+    new_thread.join().unwrap();
+    println!("share value in main thread: {}", *(var.lock().unwrap()));
+  }
+
+  use rayon::prelude::*;
+  {
+    // parallel pattern :-(
+    let mut colors = [-20.0f32, 0.0, 20.0, 40.0,
+      80.0, 100.0, 150.0, 180.0, 200.0, 250.0, 300.0];
+    println!("original: {:?}", &colors);
+    colors.par_iter_mut().for_each(|color|{
+      let c: f32 = if *color < 0.0 {
+        0.0
+      } else if *color > 255.0 {
+        255.0
+      } else {
+        *color
+      };
+      *color = c / 255.0;
+    });
+    println!("transformed: {:?}", &colors);
   }
 
   Ok(())
