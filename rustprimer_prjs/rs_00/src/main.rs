@@ -2,220 +2,90 @@
 non_upper_case_globals, non_snake_case)]
 
 fn main() -> Result<(), std::io::Error> {
-  // concurrent / parallel / multiple threads
-  use std::thread;
-  use rand::Rng;
-  use std::collections::HashMap;
+  // Unsafe / Raw Pointer
   {
-    let new_thread = thread::spawn(move||{ // FnOnce
-      println!("I am a new thread");
-    });
-    new_thread.join().unwrap();
+    // unsafe
+    //
+    // 1, deref raw pointer(*mut T / *const T)
+    let x = 5;
+    let raw = &x as *const i32;
+    let points_at = unsafe { *raw };
+    println!("raw points at {}", points_at);
 
-    let new_thread_result = thread::Builder::new()
-      .name("thread1".to_string()) // set name
-      .stack_size(4*1024*1024).spawn(move||{ // set thread stack size
-        println!("I am thread1.");
-      });
-      new_thread_result.unwrap() // build may failed
-        .join().unwrap();
-    
-    let new_thread = thread::spawn(move||{
-      loop {
-        print!("\rI am a new thread.");
-      }
-    });
-    // new_thread.join().unwrap(); // main thread exits, children threads exit too
-
-    let new_thread = thread::spawn(move||{
-      thread::spawn(move||{
-        loop {
-          print!("\rI am a new thread.");
-        }
-      });
-    });
-    new_thread.join().unwrap();
-    println!("Child thread is finish!"); // parent thread exits, children threads may not exits
-    thread::sleep_ms(100);
-
-    let mut goals: HashMap<usize, (i32, String)> = HashMap::new();
-    for i in (1..=100usize) {
-      let mut rng = rand::thread_rng();
-      let x = rng.gen_range(0..=100);
-      let v = thread::spawn(move||{
-        match x {
-          x if x >= 90 => String::from("A"),
-          x if x >= 80 => String::from("B"),
-          x if x >= 70 => String::from("C"),
-          x if x >= 60 => String::from("D"),
-          _ => String::from("E"),
-        }
-      }).join().unwrap();
-      goals.insert(i, (x, v));
+    // 2, read/write a mutable static variable
+    static mut N: i32 = 5;
+    unsafe {
+      N += 1;
+      println!("N: {}", N);
     }
-    for i in 1..=100usize {
-      println!("{:>3}'s goal is {:<3}, rank: {}", i, goals[&i].0, goals[&i].1);
-    }
+    // 3, invoke an unsafe function
+    unsafe fn foo() {}
+    unsafe { foo() };
+
+    // 4, unsafe fn defination
+    unsafe fn danger_will_robinson() {}
+
+    // 5, unsafe block
+    unsafe {}
+
+    // 6, unsafe trait
+    unsafe trait Scary{}
+    unsafe impl Scary for i32 {}
+
+    // 7, safe != no bug
+    // 不属于“内存安全”的范畴：
+    // 死锁
+    // 内存或其他资源溢出
+    // 退出未调用析构函数
+    // 整型溢出
+
+    // 使用unsafe时需要注意一些特殊情形：
+    // 数据竞争
+    // 解引用空裸指针和悬垂裸指针
+    // 读取未初始化的内存
+    // 使用裸指针打破指针重叠规则
+    // &mut T和&T遵循LLVM范围的noalias模型，除了如果&T包含一个UnsafeCell<U>的话。不安全代码必须不能违反这些重叠（aliasing）保证
+    // 不使用UnsafeCell<U>改变一个不可变值/引用
+    // 通过编译器固有功能调用未定义行为：
+    //    使用std::ptr::offset（offset功能）来索引超过对象边界的值，除了允许的末位超出一个字节
+    //    在重叠（overlapping）缓冲区上使用std::ptr::copy_nonoverlapping_memory（memcpy32/memcpy64功能）
+    // 原生类型的无效值，即使是在私有字段/本地变量中：
+    //    空/悬垂引用或装箱
+    //    bool中一个不是false（0）或true（1）的值
+    //    enum中一个并不包含在类型定义中判别式
+    //    char中一个代理字（surrogate）或超过char::MAX的值
+    //    str中非UTF-8字节序列
+    // 在外部代码中使用Rust或在Rust中使用外部语言
   }
 
-  use std::sync::mpsc; // Multiple Producers Single Consumer
-  use std::rc::Rc;
   {
-    struct Student {
-      id: u32
-    }
-    // !Send contains:
+    // raw pointer: *mut T / *const T
     //
-    // 1, *mut T / *const T
-    // 2, Rc / Weak
+    // can share data with Rc<T> / Arc<T>
 
-    // let (tx, rx): (mpsc::Sender<Rc<Student>>, mpsc::Receiver<Rc<Student>>) = mpsc::channel(); // error: Rc<Student> not imples Send
-    let (tx, rx): (mpsc::Sender<i32>, mpsc::Receiver<i32>) = mpsc::channel();
-    thread::spawn(move||{
-      tx.send(1).unwrap(); // move tx to this thread, send i32 back to rx
-    });
-    println!("receive {}", rx.recv().unwrap());
+    // 不能保证指向有效的内存，甚至不能保证是非空的
+    // 没有任何自动清除，所以需要手动管理资源
+    // 是普通旧式类型，也就是说，它不移动所有权，因此Rust编译器不能保证不出像释放后使用这种bug
+    // 缺少任何形式的生命周期，不像&，因此编译器不能判断出悬垂指针
+    // 除了不允许直接通过*const T改变外，没有别名或可变性的保障
 
-    // self-define struct can send cross threads
-    #[derive(Debug)]
-    struct Student1<F> 
-      where F: Send + 'static 
-    {
-      id: Rc<F>,
+    let a = 1;
+    let b = &a as *const i32;
+
+    let mut x = 2;
+    let y = &mut x as *mut i32;
+
+    let a = 1;
+    let b = &a as *const i32;
+    let c = unsafe { *b };
+    println!("{}", c);
+
+    let a: Box<i32> = Box::new(10);
+    let b: *const i32 = &*a as *const i32;
+    let c: *const i32 = Box::into_raw(a);
+    unsafe {
+      println!("{}", *c);
     }
-    // self guarantee safety
-    unsafe impl<F> Send for Student1<F> where F: Send + 'static {}
-    let (tx, rx): (mpsc::Sender<Student1<i32>>, mpsc::Receiver<Student1<i32>>) = mpsc::channel(); 
-    thread::spawn(move||{
-      let id_rc = Rc::new(0);
-      tx.send(Student1{id: id_rc}).unwrap(); 
-    });
-    println!("receive {:?}", rx.recv().unwrap());
-
-    const THREAD_COUNT: i32 = 2;
-    let (tx, rx): (mpsc::Sender<i32>, mpsc::Receiver<i32>) = mpsc::channel();
-    for id in 0..THREAD_COUNT {
-      let thread_tx = tx.clone(); // like Rc
-      thread::spawn(move||{
-        thread_tx.send(id+1).unwrap(); // no blocking, limitless capacity size
-        println!("send {}", id + 1);
-      });
-    }
-    thread::sleep_ms(2000);
-    println!("wake up");
-    for _ in 0..THREAD_COUNT {
-      println!("receive {}", rx.recv().unwrap()); // blocking, FIFO
-    }
-
-    let (tx, rx): (mpsc::SyncSender<i32>, mpsc::Receiver<i32>) = mpsc::sync_channel(0); // specified capacity size, 0 represents no cache
-    let new_thread = thread::spawn(move||{
-      println!("before send");
-      tx.send(1).unwrap(); // capacity size 0, blocking
-      println!("after send");
-    });
-    println!("before sleep");
-    thread::sleep_ms(5000);
-    println!("after sleep");
-    println!("receive {}", rx.recv().unwrap());
-    new_thread.join().unwrap();
-  }
-
-  use std::sync::Arc;
-  {
-    // shared memory: more data race
-    //
-    static mut VAR: i32 = 5; // const will inline to code
-    let new_thread = thread::spawn(move||{
-      unsafe { // self guarantee safety
-        println!("static value in new thread: {}", unsafe { VAR } );
-        VAR = VAR + 1 
-      };
-    });
-    new_thread.join().unwrap();
-    println!("static value in main thread: {}", unsafe { VAR } );
-
-    let var: Arc<i32> = Arc::new(5); // includes Box implement
-    let share_var = var.clone();
-    let new_thread = thread::spawn(move||{
-      println!("share value in new thread: {}, address: {:p}", share_var, &*share_var);
-    });
-    new_thread.join().unwrap();
-    println!("share value in main thread: {}, address: {:p}", var, &*var); // same object pointer address
-  }
-
-  use std::sync::{
-    Mutex, // methods: lock 
-    Condvar, // methods: wait, notify_one, notify_all
-  };
-  use std::sync::atomic::{
-    AtomicUsize, // AtomicBool, AtomicIsize, AtomicPtr
-    Ordering,
-  };
-  {
-    // condition variable
-    //
-    let pair = Arc::new((Mutex::new(false), Condvar::new()));
-    let pair2 = pair.clone();
-    thread::spawn(move||{
-      let &(ref lock, ref cvar) = &*pair2;
-      let mut started = lock
-        .lock() // require mutex guard lock, blocking
-        .unwrap(); // got mutex guard lock
-      *started = true;
-      cvar.notify_one();
-      println!("notify main thread");
-      drop(started); // release mutex guard lock
-    });
-    // Wait for the thread to start up?
-    let &(ref lock, ref cvar) = &*pair;
-    let mut started = lock.lock().unwrap(); // need to get mutex guard lock first
-    while !*started {
-      println!("before wait");
-      started = cvar.wait(started).unwrap(); // wait(started) consume/release mutex guard lock, return the mutex guard to get own mutex lock again
-      println!("after wait");
-    }
-
-    // atomic type: more effect
-    //
-    let var: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(5));
-    let share_var = var.clone();
-    let new_thread = thread::spawn(move||{
-      println!("share value in new thread: {}", share_var.load(Ordering::SeqCst));
-      share_var.store(9, Ordering::SeqCst);
-    });
-    new_thread.join().unwrap();
-    println!("share value in main thread: {}", var.load(Ordering::SeqCst));
-
-    // lock
-    // 
-    let var: Arc<Mutex<u32>> = Arc::new(Mutex::new(5));
-    let share_var = var.clone();
-    let new_thread = thread::spawn(move||{
-      let mut val = share_var.lock().unwrap();
-      println!("share value in new thread: {}", *val);
-      *val = 9;
-    });
-    new_thread.join().unwrap();
-    println!("share value in main thread: {}", *(var.lock().unwrap()));
-  }
-
-  use rayon::prelude::*;
-  {
-    // parallel pattern :-(
-    let mut colors = [-20.0f32, 0.0, 20.0, 40.0,
-      80.0, 100.0, 150.0, 180.0, 200.0, 250.0, 300.0];
-    println!("original: {:?}", &colors);
-    colors.par_iter_mut().for_each(|color|{
-      let c: f32 = if *color < 0.0 {
-        0.0
-      } else if *color > 255.0 {
-        255.0
-      } else {
-        *color
-      };
-      *color = c / 255.0;
-    });
-    println!("transformed: {:?}", &colors);
   }
 
   Ok(())
