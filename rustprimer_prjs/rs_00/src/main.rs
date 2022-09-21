@@ -2,91 +2,173 @@
 non_upper_case_globals, non_snake_case)]
 
 fn main() -> Result<(), std::io::Error> {
-  // Unsafe / Raw Pointer
+  // FFI - Foreign Function Interface: interact with other program language (FFI,IPC/RPC...)
+  use libc;
+  use libc::c_int;
+  use libc::c_void;
+  use libc::size_t;
+  // {
+  //   #[link(name="yourlib")] // i.e libyourlib.so / libyourlib.dll / libyourlib.dylib / libyourlib.a
+  //   extern {
+  //     fn your_func(arg1: c_int, arg2: *mut c_void) -> size_t; // declares ffi function
+  //     fn your_func2(arg1: c_int, arg2: *mut c_void) -> size_t;
+  //     static ffi_global: c_int; // declares ffi global variable
+  //   }
+  //   let result: size_t = unsafe { your_func(1 as c_int, Box::into_raw(Box::new(3)) as *mut c_void) };
+  //   pub fn your_func_wrapper(arg1: i32, arg2: &mut i32) -> isize {
+  //     (unsafe { your_func(1 as c_int, Box::into_raw(Box::new(3)) as *mut c_void) }) as isize
+  //   }
+
+  //   // C Compat: struct / enum
+  //   //
+  //   // #[repr(C)] // C compat struct 
+  //   #[repr(C, packed)] // mem align
+  //   struct RustObject {
+  //     a: c_int,
+  //     // other members
+  //   }
+
+  //   // callback function
+  //   //
+  //   extern "C" fn callback(a: c_int) { // provide to C to invoke
+  //     println!{"hello {}!", a};
+  //   }
+  //   #[link(name="yourlib")]
+  //   extern {
+  //     fn run_callback(data: i32, cb: extern fn(i32));
+  //     // typedef void (*rust_callback)(int32_t); // define callback function type
+  //     // void run_callback(int32_t data, rust_callback callback) {
+  //     //   callback(data); // invoke callback function
+  //     // }
+  //   }
+  //   unsafe {
+  //     run_callback(1 as i32, callback); // print 1
+  //   }
+  // }
+
+  use std::ffi::{CStr, CString};
+  use libc::c_char;
+  // {
+  //   // CStr: C string to rust str
+  //   // 
+  //   #[link(name="yourlib")]
+  //   extern {
+  //     fn char_func() -> *mut c_char;
+  //   }
+  //   fn get_string() -> String {
+  //     unsafe {
+  //       // all chars are represented by utf8 in rust
+  //       let raw_string: *mut c_char = char_func();
+  //       let cstr = CStr::from_ptr(my_string());
+  //       cstr.to_string_lossy() // all utf8 chars, zero copy to &str; not all utf8 chars, copy once, turn illegal char to U+FFFD
+  //         .into_owned()
+  //     }
+  //   }
+
+  //   // CString: rust str ot c string
+  //   //
+  //   use std::os::raw::c_char;
+  //   extern {
+  //     fn my_printer(s: *const c_char);
+  //   }
+  //   let c_to_print = CString::new("Hello, world!").unwrap(); // should not include \0 (which represents end of the string in c), will return Error
+  //   unsafe {
+  //     my_printer(c_to_print.as_ptr()) // turn CString to char pointer, then provide to c
+  //   }
+  // }
+
+  // {
+  //   // opaque struct
+  //   //
+  //   enum OpaqueStruct {}
+  //   extern "C" { pub fn foo(arg: *mut OpaqueStruct); }
+  //   // struct OpaqueStruct;
+  //   // void foo(struct OpaqueStruct *arg);
+
+  //   // empty pointer
+  //   //
+  //   0 as *const i32 as *const _;
+  //   std::ptr::null::<i32>();
+
+  //   // destruct c type need to implement Drop trait
+
+  //   // Option<extern "C" fn(c_int) -> c_int> // optimzie to a emptiable function pointer
+
+  //   extern {
+  //     pub fn foo(arg: extern fn()-> *const c_char);
+  //   }
+  //   extern "C" fn danger() -> *const c_char {
+  //     let cstring = CString::new("I'm a danger string").unwrap();
+  //     // cstring.as_ptr() // as_ptr() take &self, CString is owned type, will drop when out of scope
+  //     cstring.into_raw() // into_raw() take self, take the ownership, CString won't drop
+  //   }
+  //   unsafe {
+  //     foo(danger); // pointer to an unknown mem space
+  //   }
+
+  //   // panic in ffi(i.e cffi) is unknown, should not use panic!/unimplemented!/unwrap...
+
+  //   #[link(name="foo", kind="static")] // static libray
+  //   #[link(name="CoreFoundation", kind="framework")] // mac os framework libray
+
+  //   // extern "C" fn; // stdcall / appcs / cdecl / fastcall / vectorcall / Rust / rust-intrinsic / system / C / win64
+
+  //   // ./bindgen [options] input.h // rust-bindgen: generate extern from declare head file
+  
+  //   #[no_mangle] // C can link this with "test" name
+  //   extern "C" fn test() {} // nm [lib/bin]
+  // }
+
   {
-    // unsafe
-    //
-    // 1, deref raw pointer(*mut T / *const T)
-    let x = 5;
-    let raw = &x as *const i32;
-    let points_at = unsafe { *raw };
-    println!("raw points at {}", points_at);
+    // crate default type rlib, can be specified as follow 
+    // 1, #![crate_type="foo"] at the source file top // foo might be bin / lib / rlib / dylib / staticlib 
+    // 2, rustc --crate-type foo, in command
+    // 3, cargo in Cargo.toml, crate-type = ["foo"]
 
-    // 2, read/write a mutable static variable
-    static mut N: i32 = 5;
-    unsafe {
-      N += 1;
-      println!("N: {}", N);
+    use std::mem::transmute;
+    #[derive(Debug)]
+    struct Foo<T> {
+      t: T
     }
-    // 3, invoke an unsafe function
-    unsafe fn foo() {}
-    unsafe { foo() };
+    #[no_mangle]
+    extern "C" fn new_foo_vec() -> *const c_void {
+      Box::into_raw(Box::new(Foo {t: vec![1,2,3]})) as *const c_void
+    }
+    #[no_mangle]
+    extern "C" fn new_foo_int() -> *const c_void {
+      Box::into_raw(Box::new(Foo {t: 1})) as *const c_void
+    }
+    fn push_foo_element(t: &mut Foo<Vec<i32>>) { t.t.push(1); }
+    #[no_mangle]
+    extern "C" fn push_foo_element_c(foo: *mut c_void) {
+      let foo2 = unsafe {
+        &mut *(foo as *mut Foo<Vec<i32>>) // Foo<Vec<i32>>? Foo<i32> in case
+      };
+      push_foo_element(foo2);
+    }
 
-    // 4, unsafe fn defination
-    unsafe fn danger_will_robinson() {}
-
-    // 5, unsafe block
-    unsafe {}
-
-    // 6, unsafe trait
-    unsafe trait Scary{}
-    unsafe impl Scary for i32 {}
-
-    // 7, safe != no bug
-    // 不属于“内存安全”的范畴：
-    // 死锁
-    // 内存或其他资源溢出
-    // 退出未调用析构函数
-    // 整型溢出
-
-    // 使用unsafe时需要注意一些特殊情形：
-    // 数据竞争
-    // 解引用空裸指针和悬垂裸指针
-    // 读取未初始化的内存
-    // 使用裸指针打破指针重叠规则
-    // &mut T和&T遵循LLVM范围的noalias模型，除了如果&T包含一个UnsafeCell<U>的话。不安全代码必须不能违反这些重叠（aliasing）保证
-    // 不使用UnsafeCell<U>改变一个不可变值/引用
-    // 通过编译器固有功能调用未定义行为：
-    //    使用std::ptr::offset（offset功能）来索引超过对象边界的值，除了允许的末位超出一个字节
-    //    在重叠（overlapping）缓冲区上使用std::ptr::copy_nonoverlapping_memory（memcpy32/memcpy64功能）
-    // 原生类型的无效值，即使是在私有字段/本地变量中：
-    //    空/悬垂引用或装箱
-    //    bool中一个不是false（0）或true（1）的值
-    //    enum中一个并不包含在类型定义中判别式
-    //    char中一个代理字（surrogate）或超过char::MAX的值
-    //    str中非UTF-8字节序列
-    // 在外部代码中使用Rust或在Rust中使用外部语言
-  }
-
-  {
-    // raw pointer: *mut T / *const T
-    //
-    // can share data with Rc<T> / Arc<T>
-
-    // 不能保证指向有效的内存，甚至不能保证是非空的
-    // 没有任何自动清除，所以需要手动管理资源
-    // 是普通旧式类型，也就是说，它不移动所有权，因此Rust编译器不能保证不出像释放后使用这种bug
-    // 缺少任何形式的生命周期，不像&，因此编译器不能判断出悬垂指针
-    // 除了不允许直接通过*const T改变外，没有别名或可变性的保障
-
-    let a = 1;
-    let b = &a as *const i32;
-
-    let mut x = 2;
-    let y = &mut x as *mut i32;
-
-    let a = 1;
-    let b = &a as *const i32;
-    let c = unsafe { *b };
-    println!("{}", c);
-
-    let a: Box<i32> = Box::new(10);
-    let b: *const i32 = &*a as *const i32;
-    let c: *const i32 = Box::into_raw(a);
-    unsafe {
-      println!("{}", *c);
+    use std::any::Any;
+    #[no_mangle]
+    extern "C" fn new_foo_vec1() -> *const c_void {
+      Box::into_raw(Box::new(Box::new(Foo{t: vec![1,2,3]}) as Box<dyn Any>)) as *const c_void
+    }
+    #[no_mangle]
+    extern "C" fn new_foo_int1() -> *const c_void {
+      Box::into_raw(Box::new(Box::new(Foo{t: 1}) as Box<dyn Any>)) as *const c_void
+    }
+    fn push_foo_element1(t: &mut Foo<Vec<i32>>) { t.t.push(1) }
+    #[no_mangle]
+    extern "C" fn push_foo_element_c1(foo: *mut c_void) {
+      let foo2 = unsafe {
+        &mut *(foo as *mut Box<dyn Any>)
+      };
+      let foo3: Option<&mut Foo<Vec<i32>>> = foo2.downcast_mut(); // error if foo2 is not *const Box<Foo<Vec<i32>>>
+      if let Some(value) = foo3 {
+        push_foo_element1(value);
+      }
     }
   }
+  
 
   Ok(())
 }
