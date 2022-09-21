@@ -3,357 +3,188 @@ non_upper_case_globals, non_snake_case, unnameable_test_items)]
 
 fn main() -> Result<(), std::io::Error> {  
   {
-    // Attribute
-    //
-    // 属性（Attribute）是一种通用的用于表达元数据的特性，借鉴ECMA-334(C#)的语法来实现ECMA-335中描述的Attributes。属性只能应用于Item（元素、项），
-    // 例如 use 声明、模块、函数等。
+    // 版本格式：主版本号.次版本号.修订号，版本号递增规则如下：
+    //    主版本号：当你做了不兼容的 API 修改，
+    //    次版本号：当你做了向下兼容的功能性新增，
+    //    修订号：当你做了向下兼容的问题修正。
+    // 先行版本号及版本编译信息可以加到“主版本号.次版本号.修订号”的后面，作为延伸。
 
-    // Item
-    //
-    // 在Rust中，Item是Crate（库）的一个组成部分。它包括:
-    //    extern crate声明
-    //    use声明
-    //    模块（模块是一个Item的容器）
-    //    函数
-    //    type定义
-    //    结构体定义
-    //    枚举类型定义
-    //    常量定义
-    //    静态变量定义
-    //    Trait定义
-    //    实现（Impl）
-    // 这些Item是可以互相嵌套的，比如在一个函数中定义一个静态变量、在一个模块中使用use声明或定义一个结构体。这些定义在某个作用域里面的Item跟你把
-    // 它写到最外层作用域所实现的功能是一样的，只不过你要访问这些嵌套的Item就必须使用路径（Path），如a::b::c。但一些外层的Item不允许你使用路径去
-    // 访问它的子Item，比如函数，在函数中定义的静态变量、结构体等，是不可以通过路径来访问的。
+    // [package]
+    // # 软件包名称，如果需要在别的地方引用此软件包，请用此名称。
+    // name = "hello_world"
+    // # 当前版本号，这里遵循semver标准，也就是语义化版本控制标准。
+    // version = "0.1.0"    # the current version, obeying semver
+    // # 软件所有作者列表
+    // authors = ["you@example.com"]
+    // # 非常有用的一个字段，如果要自定义自己的构建工作流，
+    // # 尤其是要调用外部工具来构建其他本地语言（C、C++、D等）开发的软件包时。
+    // # 这时，自定义的构建流程可以使用rust语言，写在"build.rs"文件中。
+    // build = "build.rs"
+    // # 显式声明软件包文件夹内哪些文件被排除在项目的构建流程之外，
+    // # 哪些文件包含在项目的构建流程中
+    // exclude = ["build/**/*.o", "doc/**/*.html"]
+    // include = ["src/**/*", "Cargo.toml"]
+    // # 当软件包在向公共仓库发布时出现错误时，使能此字段可以阻止此错误。
+    // publish = false
+    // # 关于软件包的一个简短介绍。
+    // description = "..."
+    // # 下面这些字段标明了软件包仓库的更多信息
+    // documentation = "..."
+    // homepage = "..."
+    // repository = "..."
+    // # 顾名思义，此字段指向的文件就是传说中的ReadMe，
+    // # 并且，此文件的内容最终会保存在注册表数据库中。
+    // readme = "..."
+    // # 用于分类和检索的关键词。
+    // keywords = ["...", "..."]
+    // # 软件包的许可证，必须是cargo仓库已列出的已知的标准许可证。
+    // license = "..."
+    // # 软件包的非标许可证书对应的文件路径。
+    // license-file = "..."    
 
-    // Attribute Syntax
-    //
-    // #[name(arg1, arg2 = "param")]
-    // #[unix]
-    // #[link(name = "openssl")]
-    // #[cfg(and(unix, not(windows)))]
+    // [dependencies]
+    // hammer = "0.5.0"
+    // color = "> 0.6.0, < 0.8.0"
 
-    #![feature(box_syntax)] // with !, effect the entire file's Items
-    #[test] // without !, only effect the Item at next line
-    fn test_foo() {}
-    #[cfg(target_os="linux")] // condition compile, only compiled in a linux os
-    mod bar {}
-    #[allow(non_camel_case_types)]
-    type int8_t = i8;
+    // # 注意，此处的cfg可以使用not、any、all等操作符任意组合键值对。
+    // # 并且此用法仅支持cargo 0.9.0（rust 1.8.0）以上版本。
+    // # 如果是windows平台，则需要此依赖。
+    // [target.'cfg(windows)'.dependencies]
+    // winhttp = "0.4.0"
+    // [target.'cfg(unix)'.dependencies]
+    // openssl = "1.0.1"
+    // #如果是32位平台，则需要此依赖。
+    // [target.'cfg(target_pointer_width = "32")'.dependencies]
+    // native = { path = "native/i686" }
+    // [target.'cfg(target_pointer_width = "64")'.dependencies]
+    // native = { path = "native/i686" }
+    // # 另一种写法就是列出平台的全称描述
+    // [target.x86_64-pc-windows-gnu.dependencies]
+    // winhttp = "0.4.0"
+    // [target.i686-unknown-linux-gnu.dependencies]
+    // openssl = "1.0.1"
+    // # 如果使用自定义平台，请将自定义平台文件的完整路径用双引号包含
+    // [target."x86_64/windows.json".dependencies]
+    // winhttp = "0.4.0"
+    // [target."i686/linux.json".dependencies]
+    // openssl = "1.0.1"
+    // native = { path = "native/i686" }
+    // openssl = "1.0.1"
+    // native = { path = "native/x86_64" }
+    // # [dev-dependencies]段落的格式等同于[dependencies]段落，
+    // # 不同之处在于，[dependencies]段落声明的依赖用于构建软件包，
+    // # 而[dev-dependencies]段落声明的依赖仅用于构建测试和性能评估。
+    // # 此外，[dev-dependencies]段落声明的依赖不会传递给其他依赖本软件包的项目
+    // [dev-dependencies]
+    // iron = "0.2"
 
-    // Crate Attribute
-    //
-    // crate_name - 指定Crate的名字。如#[crate_name = "my_crate"]则可以让编译出的库名字为libmy_crate.rlib。
-    // crate_type - 指定Crate的类型，有以下几种选择:
-    //    "bin" - 编译为可执行文件；
-    //    "lib" - 编译为库；
-    //    "dylib" - 编译为动态链接库；
-    //    "staticlib" - 编译为静态链接库；
-    //    "rlib" - 编译为Rust特有的库文件，它是一种特殊的静态链接库格式，它里面会含有一些元数据供编译器使用，最终会静态链接到目标文件之中。
-    // feature - 可以开启一些不稳定特性，只可在nightly版的编译器中使用。
-    // no_builtins - 去掉内建函数。
-    // no_main- 不生成main这个符号，当你需要链接的库中已经定义了main函数时会用到。
-    // no_start - 不链接自带的native库。
-    // no_std - 不链接自带的std库。
-    // plugin - 加载编译器插件，一般用于加载自定义的编译器插件库。用法是
-    //    #![plugin(foo, bar)]
-    //    #![plugin(foo(arg1, arg2))]
-    // recursive_limit - 设置在编译期最大的递归层级。比如自动解引用、递归定义的宏等。默认设置是#![recursive_limit = "64"]
+    // # 开发模板, 对应`cargo build`命令
+    // [profile.dev]
+    // opt-level = 0  # 控制编译器的 --opt-level 参数，也就是优化参数
+    // debug = true   # 控制编译器是否开启 `-g` 参数
+    // rpath = false  # 控制编译器的 `-C rpath` 参数
+    // lto = false    # 控制`-C lto` 参数，此参数影响可执行文件和静态库的生成，
+    // debug-assertions = true  # 控制调试断言是否开启
+    // codegen-units = 1 # 控制编译器的 `-C codegen-units` 参数。注意，当`lto = true`时，此字段值被忽略
+    // # 发布模板, 对应`cargo build --release`命令
+    // [profile.release]
+    // opt-level = 3
+    // debug = false
+    // rpath = false
+    // lto = false
+    // debug-assertions = false
+    // codegen-units = 1
+    // # 测试模板，对应`cargo test`命令
+    // [profile.test]
+    // opt-level = 0
+    // debug = true
+    // rpath = false
+    // lto = false
+    // debug-assertions = true
+    // codegen-units = 1
+    // # 性能评估模板，对应`cargo bench`命令
+    // [profile.bench]
+    // opt-level = 3
+    // debug = false
+    // rpath = false
+    // lto = false
+    // debug-assertions = false
+    // codegen-units = 1
+    // # 文档模板，对应`cargo doc`命令
+    // [profile.doc]
+    // opt-level = 0
+    // debug = true
+    // rpath = false
+    // lto = false
+    // debug-assertions = true
+    // codegen-units = 1
 
-    // Module Attribute
-    //
-    // no_implicit_prelude - 取消自动插入use std::prelude::*
-    // path - 设置此mod的文件路径。如声明mod a;，则寻找
-    //    本文件夹下的a.rs文件
-    //    本文件夹下的a/mod.rs文件
-    //    #[cfg(unix)]
-    //    #[path = "sys/unix.rs"]
-    //    mod sys;
-    //
-    //    #[cfg(windows)]
-    //    #[path = "sys/windows.rs"]
-    //    mod sys;
+    // [package]
+    // name = "awesome"
+    // [features]
+    // # 此字段设置了可选依赖的默认选择列表，
+    // # 注意这里的"session"并非一个软件包名称，
+    // # 而是另一个featrue字段session
+    // default = ["jquery", "uglifier", "session"]
+    // # 类似这样的值为空的feature一般用于条件编译，
+    // # 类似于`#[cfg(feature = "go-faster")]`。
+    // go-faster = []
+    // # 此feature依赖于bcrypt软件包，
+    // # 这样封装的好处是未来可以对secure-password此feature增加可选项目。
+    // secure-password = ["bcrypt"]
+    // # 此处的session字段导入了cookie软件包中的feature段落中的session字段
+    // session = ["cookie/session"]
+    // [dependencies]
+    // # 必要的依赖
+    // cookie = "1.2.0"
+    // oauth = "1.1.0"
+    // route-recognizer = "=2.1.0"
+    // # 可选依赖
+    // jquery = { version = "1.0.2", optional = true }
+    // uglifier = { version = "1.5.3", optional = true }
+    // bcrypt = { version = "*", optional = true }
+    // civet = { version = "*", optional = true }  
 
-    // Function Attribute
-    //
-    // main - 把这个函数作为入口函数，替代fn main，会被入口函数（Entry Point）调用。
-    // plugin_registrar - 编写编译器插件时用，用于定义编译器插件的入口函数。
-    // start - 把这个函数作为入口函数（Entry Point），改写 start language item。
-    // test - 指明这个函数为单元测试函数，在非测试环境下不会被编译。
-    // should_panic - 指明这个单元测试函数必然会panic。
-    // cold - 指明这个函数很可能是不会被执行的，因此优化的时候特别对待它。
-    //    // 把`my_main`作为主函数
-    //    #[main]
-    //    fn my_main() {
-    //    }
-    //    // 把`plugin_registrar`作为此编译器插件的入口函数
-    //    #[plugin_registrar]
-    //    pub fn plugin_registrar(reg: &mut Registry) {
-    //        reg.register_macro("rn", expand_rn);
-    //    }
-    //    // 把`entry_point`作为入口函数，不再执行标准库中的初始化流程
-    //    #[start]
-    //    fn entry_point(argc: isize, argv: *const *const u8) -> isize {
-    //    }
-    //    // 定义一个单元测试
-    //    // 这个单元测试一定会panic
-    //    #[test]
-    //    #[should_panic]
-    //    fn my_test() {
-    //        panic!("I expected to be panicked");
-    //    }
-    //    // 这个函数很可能是不会执行的，
-    //    // 所以优化的时候就换种方式
-    //    #[cold]
-    //    fn unlikely_to_be_executed() {
-    //    }
+    // [dependencies.awesome]
+    // version = "1.3.5"
+    // default-features = false # 禁用awesome 的默认features
+    // features = ["secure-password", "civet"] # 使用此处列举的各项features
 
-    // Global Static Variable Attribute
-    //
-    // thread_local - 只可用于static mut，表示这个变量是thread local的。
+    // 使用features时需要遵循以下规则：
+    //   feature名称在本描述文件中不能与出现的软件包名称冲突
+    //   除了default feature，其他所有的features均是可选的
+    //   features不能相互循环包含
+    //   开发依赖包不能包含在内
+    //   features组只能依赖于可选软件包
+    // features的一个重要用途就是，当开发者需要对软件包进行最终的发布时，在进行构建时可以声明暴露给终端用户的features，这可以通过下述命令实现：cargo build --release --features "shumway pdf"
 
-    // FFI Attribute
-    //
-    // extern块可以应用以下属性
-    //    link_args - 指定链接时给链接器的参数，平台和实现相关。
-    //    link - 说明这个块需要链接一个native库，它有以下参数：
-    //      name - 库的名字，比如libname.a的名字是name；
-    //      kind - 库的类型，它包括(dylib - 动态链接库, static - 静态库, framework - OS X里的Framework)
-    //    #[link(name = "readline")]
-    //    extern {
-    //    }
-    //    #[link(name = "CoreFoundation", kind = "framework")]
-    //    extern {
-    //    }
-    // 在extern块里面，可以使用
-    //    link_name - 指定这个链接的外部函数的名字或全局变量的名字；
-    //    linkage - 对于全局变量，可以指定一些LLVM的链接类型（ http://llvm.org/docs/LangRef.html#linkage-types ）。
-    // 对于enum类型，可以使用
-    //    repr - 目前接受C，C表示兼容C ABI。
-    //    #[repr(C)]
-    //    enum eType {
-    //      Operator,
-    //      Indicator,
-    //    }
-    // 对于struct类型，可以使用
-    //    repr - 目前只接受C和packed，C表示结构体兼容C ABI，packed表示移除字段间的padding。
+    // 当运行cargo test命令时，cargo将会按做以下事情：
+    //   编译并运行软件包源代码中被#[cfg(test)] 所标志的单元测试
+    //   编译并运行文档测试
+    //   编译并运行集成测试
+    //   编译examples
 
-    // Macro Attribute
-    //
-    // macro_use - 把模块或库中定义的宏导出来
-    //    应用于mod上，则把此模块内定义的宏导出到它的父模块中
-    //    应用于extern crate上，则可以接受一个列表，则可以只导入列表中指定的宏，若不指定则导入所有的宏。如
-    //      #[macro_use(debug, trace)]
-    //      extern crate log;
-    // macro_reexport - 应用于extern crate上，可以再把这些导入的宏再输出出去给别的库使用。
-    // macro_export - 应于在宏上，可以使这个宏可以被导出给别的库使用。
-    // no_link - 应用于extern crate上，表示即使我们把它里面的库导入进来了，但是不要把这个库链接到目标文件中。
-
-    // Other Attribute
-    // 
-    // export_function - 用于静态变量或函数，指定它们在目标文件中的符号名。
-    // link_section - 用于静态变量或函数，表示应该把它们放到哪个段中去。
-    // no_mangle - 可以应用于任意的Item，表示取消对它们进行命名混淆，直接把它们的名字作为符号写到目标文件中。
-    // simd - 可以用于元组结构体上，并自动实现了数值运算符，这些操作会生成相应的SIMD指令。
-    // doc - 为这个Item绑定文档，跟///的功能一样，用法是
-    //    #[doc = "This is a doc"]
-    //    struct Foo {}
-
-    // Condition Compile Attribute
-    //
-    // 有时候，我们想针对不同的编译目标来生成不同的代码，比如在编写跨平台模块时，针对Linux和Windows分别使用不同的代码逻辑。
-    // 条件编译基本上就是使用cfg这个属性，直接看例子
-    //    #[cfg(target_os = "macos")]
-    //    fn cross_platform() {
-    //        // Will only be compiled on Mac OS, including Mac OS X
-    //    }
-    //    #[cfg(target_os = "windows")]
-    //    fn cross_platform() {
-    //        // Will only be compiled on Windows
-    //    }
-    //    // 若条件`foo`或`bar`任意一个成立，则编译以下的Item
-    //    #[cfg(any(foo, bar))]
-    //    fn need_foo_or_bar() {
-    //    }
-    //    // 针对32位的Unix系统
-    //    #[cfg(all(unix, target_pointer_width = "32"))]
-    //    fn on_32bit_unix() {
-    //    }
-    //    // 若`foo`不成立时编译
-    //    #[cfg(not(foo))]
-    //    fn needs_not_foo() {
-    //    }
-    // 其中，cfg可接受的条件有
-    //    debug_assertions - 若没有开启编译优化时就会成立。
-    //    target_arch = "..." - 目标平台的CPU架构，包括但不限于x86, x86_64, mips, powerpc, arm或aarch64。
-    //    target_endian = "..." - 目标平台的大小端，包括big和little。
-    //    target_env = "..." - 表示使用的运行库，比如musl表示使用的是MUSL的libc实现, msvc表示使用微软的MSVC，gnu表示使用GNU的实现。
-    //    但在部分平台这个数据是空的。
-    //    target_family = "..." - 表示目标操作系统的类别，比如windows和unix。这个属性可以直接作为条件使用，如#[unix]，#[cfg(unix)]。
-    //    target_os = "..." - 目标操作系统，包括但不限于windows, macos, ios, linux, android, freebsd, dragonfly, bitrig, openbsd, netbsd。
-    //    target_pointer_width = "..." - 目标平台的指针宽度，一般就是32或64。
-    //    target_vendor = "..." - 生产商，例如apple, pc或大多数Linux系统的unknown。
-    //    test - 当启动了单元测试时（即编译时加了--test参数，或使用cargo test）。
-    // 还可以根据一个条件去设置另一个条件，使用cfg_attr，如 #[cfg_attr(a, b)] , 这表示若a成立，则这个就相当于#[cfg(b)]。
-    // 条件编译属性只可以应用于Item，如果想应用在非Item中怎么办呢？可以使用cfg!宏，如
-    //    if cfg!(target_arch = "x86") {
-    //    } else if cfg!(target_arch = "x86_64") {
-    //    } else if cfg!(target_arch = "mips") {
-    //    } else {
-    //    }
-    // 这种方式不会产生任何运行时开销，因为不成立的条件相当于里面的代码根本不可能被执行，编译时会直接被优化掉。
-
-    // Linter Parameter Attribute
-    //
-    // 目前的Rust编译器已自带的Linter，它可以在编译时静态帮你检测不用的代码、死循环、编码风格等等。Rust提供了一系列的属性用于控制Linter的行为
-    //    allow(C) - 编译器将不会警告对于C条件的检查错误。
-    //    deny(C) - 编译器遇到违反C条件的错误将直接当作编译错误。
-    //    forbit(C) - 行为与deny(C)一样，但这个将不允许别人使用allow(C)去修改。
-    //    warn(C) - 编译器将对于C条件的检查错误输出警告。
-    // 编译器支持的Lint检查可以通过执行rustc -W help来查看。
-
-    // Inline Parameter Attribute
-    //
-    // 内联函数即建议编译器可以考虑把整个函数拷贝到调用者的函数体中，而不是生成一个call指令调用过去。这种优化对于短函数非常有用，有利于提高性能。
-    // 编译器自己会根据一些默认的条件来判断一个函数是不是应该内联，若一个不应该被内联的函数被内联了，实际上会导致整个程序更慢。
-    // 可选的属性有：
-    //    #[inline] - 建议编译器内联这个函数
-    //    #[inline(always)] - 要求编译器必须内联这个函数
-    //    #[inline(never)] - 要求编译器不要内联这个函数
-    // 内联会导致在一个库里面的代码被插入到另一个库中去。
-
-    // Automatic Implementation Trait Attribute
-    //
-    // 编译器提供一个编译器插件叫作derive，它可以帮你去生成一些代码去实现（impl）一些特定的Trait，如
-    //    #[derive(PartialEq, Clone)]
-    //    struct Foo<T> {
-    //        a: i32,
-    //        b: T,
-    //    }
-    // 编译器会自动为你生成以下的代码
-    //    impl<T: PartialEq> PartialEq for Foo<T> {
-    //        fn eq(&self, other: &Foo<T>) -> bool {
-    //            self.a == other.a && self.b == other.b
-    //        }
-    //        fn ne(&self, other: &Foo<T>) -> bool {
-    //            self.a != other.a || self.b != other.b
-    //        }
-    //    }
-    //    impl<T: Clone> Clone for Foo<T> {
-    //        fn clone(&self) -> Foo<T> {
-    //            Foo {
-    //                a: self.a.clone(),
-    //                b: self.b.clone(),
-    //            }
-    //        }
-    //    }
-    // 目前derive仅支持标准库中部分的Trait。
-
-    // Compiler Feature Attribute
-    //
-    // 在非稳定版的Rust编译器中，可以使用一些不稳定的功能，比如一些还在讨论中的新功能、正在实现中的功能等。Rust编译器提供一个应用于Crate的属性feature来启用这些不稳定的功能，如
-    //    #![feature(advanced_slice_patterns, box_syntax, asm)]
-    // 具体可使用的编译器特性会因编译器版本的发布而不同，具体请阅读官方文档。
+    // 所有的诸如[[bin]], [lib], [[bench]], [[test]]以及 [[example]]等字段，均提供了类似的配置，以说明构建目标应该怎样被构建。例如（下述例子中[lib]段落中各字段值均为默认值）：
+    //   [lib]
+    //   # 库名称，默认与项目名称相同
+    //   name = "foo"
+    //   # 此选项仅用于[lib]段落，其决定构建目标的构建方式，
+    //   # 可以取dylib, rlib, staticlib 三种值之一，表示生成动态库、r库或者静态库。
+    //   crate-type = ["dylib"]
+    //   # path字段声明了此构建目标相对于cargo.toml文件的相对路径
+    //   path = "src/lib.rs"
+    //   # 单元测试开关选项
+    //   test = true
+    //   # 文档测试开关选项
+    //   doctest = true
+    //   # 性能评估开关选项
+    //   bench = true
+    //   # 文档生成开关选项
+    //   doc = true
+    //   # 是否构建为编译器插件的开关选项
+    //   plugin = false
+    //   # 如果设置为false，`cargo test`将会忽略传递给rustc的--test参数。
+    //   harness = true
   }
-
-  {
-    // Compiler Options
-    //
-    // rustc [OPTIONS] INPUT
-    //  -h, --help - 输出帮助信息到标准输出；
-    //  --cfg SPEC - 传入自定义的条件编译参数，使用方法如
-    //    fn main() {
-    //      if cfg!(hello) {
-    //        println!("world!");
-    //      }
-    //    }
-    //    如上例所示，若cfg!(hello)成立，则运行程序就会输出"world"到标准输出。我们把这个文件保存为hello.rs然后编译它
-    //    rustc --cfg hello hello.rs
-    //    运行它就会看到屏幕中输出了world!。
-    //   
-    //  -L [KIND=]PATH - 往链接路径中加入一个文件夹，并且可以指定这个路径的类型（Kind），这些类型包括
-    //    dependency - 在这个路径下找依赖的文件，比如说mod；
-    //    crate - 只在这个路径下找extern crate中定义的库；
-    //    native - 只在这个路径下找Native库；
-    //    framework - 只在OS X下有用，只在这个路径下找Framework；
-    //    all - 默认选项。
-    //   
-    //  -l [KIND=]NAME - 链接一个库，这个库可以指定类型（Kind），如果不传，默认为dylib。
-    //    static - 静态库；
-    //    dylib - 动态库；
-    //    framework - OS X的Framework。
-    //    此处举一个例子如何手动链接一个库，我们先创建一个文件叫myhello.rs，在里面写一个函数
-    //      // myhello.rs
-    //      /// 这个函数仅仅向标签输出打印 Hello World!
-    //      /// 不要忘记要把它标记为 pub 哦。
-    //      pub fn print_hello() {
-    //        println!("Hello World!");
-    //      }
-    //    然后把这个文件编译成一个静态库，libmyhello.a: rustc --crate-type staticlib myhello.rs
-    //    然后再创建一个main.rs，链接这个库并打印出”Hello World!”
-    //      // main.rs
-    //      // 指定链接库 myhello
-    //      extern crate myhello;
-    //      fn main() {
-    //          // 调用库函数
-    //          myhello::print_hello();
-    //      }
-    //    编译main.rs: rustc -L. -lmyhello main.rs
-    //    运行main，就会看到屏幕输出”Hello World!”啦。
-    //  --crate-type - 指定编译输出类型，它的参数包括
-    //      bin - 二进行可执行文件
-    //      lib - 编译为库
-    //      rlib - Rust库
-    //      dylib - 动态链接库
-    //      staticlib - 静态链接库
-    //  --crate-name - 指定这个Crate的名字，默认是文件名，如main.rs编译成可执行文件时默认是main，但你可以指定它为foo
-    //      rustc --crate-name foo main.rs
-    //    则会输出foo可执行文件。
-    //  --emit - 指定编译器的输出。编译器默认是输出一个可执行文件或库文件，但你可以选择输出一些其它的东西用于Debug
-    //      asm - 输出汇编
-    //      llvm-bc - LLVM Bitcode；
-    //      llvm-ir - LLVM IR，即LLVM中间码（LLVM Intermediate Representation）；
-    //      obj - Object File（就是*.o文件）；
-    //      link - 这个是要结合其它--emit参数使用，会执行Linker再输出结果；
-    //      dep-info - 文件依赖关系（Debug用，类似于Makefile一样的依赖）。
-    //    以上参数可以同时使用，使用逗号分割，如: rustc --emit asm,llvm-ir,obj main.rs
-    //    同时，在最后可以加一个=PATH来指定输出到一个特定文件，如: rustc --emit asm=output.S,llvm-ir=output.ir main.rs
-    //    这样会把汇编生成到output.S文件中，把LLVM中间码输出到output.ir中。
-    //  --print - 打印一些信息，参数有
-    //      crate-name - 编译目标名；
-    //      file-names - 编译的文件名；
-    //      sysroot - 打印Rust工具链的根目录地址。
-    //  -g - 在目标文件中保存符号，这个参数等同于-C debuginfo=2。
-    //  -O - 开启优化，这个参数等同于-C opt-level=2。
-    //  -o FILENAME - 指定输出文件名，同样适用于--emit的输出。
-    //  --out-dir DIR - 指定输出的文件夹，默认是当前文件夹，且会忽略-o配置。
-    //  --explain OPT - 解释某一个编译错误，比如 若你写了一个main.rs，使用了一个未定义变量f: fn main() {f}
-    //    编译它时编译器会报错：error: unresolved name `f` [E0425], 虽然错误已经很明显，但是你也可以让编译器解释一下，什么是E0425错误：
-    //       rustc --explain E0425
-    //  --test - 编译成一个单元测试可执行文件
-    //  --target TRIPLE - 指定目标平台，基本格式是cpu-manufacturer-kernel[-os]，例如: rustc --target x86_64-apple-darwin
-    //  -W help - 打印Linter的所有可配置选项和默认值。
-    //  -W OPT, --warn OPT - 设置某一个Linter选项为Warning。
-    //  -A OPT, --allow OPT - 设置某一个Linter选项为Allow。
-    //  -D OPT, --deny OPT - 设置某一个Linter选项为Deny。
-    //  -F OPT, --forbit OPT - 设置某一个Linter选项为Forbit。
-    //  -C FLAG[=VAL], --codegen FLAG[=VAL] - 目标代码生成的的相关参数，可以用-C help来查看配置，值得关注的几个是
-    //      linker=val - 指定链接器；
-    //      linker-args=val - 指定链接器的参数；
-    //      prefer-dynamic - 默认Rust编译是静态链接，选择这个配置将改为动态链接；
-    //      debug-info=level - Debug信息级数，0 = 不生成，1 = 只生成文件行号表，2 = 全部生成；
-    //      opt-level=val - 优化级数，可选0-3；
-    //      debug_assertion - 显式开启cfg(debug_assertion)条件。
-    //  -V, --version - 打印编译器版本号。
-    //  -v, --verbose - 开启啰嗦模式（打印编译器执行的日志）。
-    //  --extern NAME=PATH - 用来指定外部的Rust库（*.rlib）名字和路径，名字应该与extern crate中指定的一样。
-    //  --sysroot PATH - 指定工具链根目录。
-    //  -Z flag - 编译器Debug用的参数，可以用-Z help来查看可用参数。
-    //  --color auto|always|never - 输出时对日志加颜色
-    //      auto - 自动选择加还是不加，如果输出目标是虚拟终端（TTY）的话就加，否则就不加；
-    //      always - 给我加！
-    //      never - 你敢加？
-  }
-
   Ok(())
 }
