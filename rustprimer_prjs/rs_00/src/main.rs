@@ -1,190 +1,115 @@
 #![allow(unused, deprecated, ellipsis_inclusive_range_patterns,
 non_upper_case_globals, non_snake_case, unnameable_test_items)]
 
+//! The `adder` crate provides functions that add numbers to other numbers.
+//!
+//! # Examples
+//!
+//! ```
+//! assert_eq!(4, adder::add_two(2));
+//! ```
+/// This function adds two to its argument.
+///
+/// # Examples
+///
+/// ```
+/// use adder::add_two;
+///
+/// assert_eq!(4, add_two(2));
+/// ```
+pub fn add_two(a: i32) -> i32 {
+  a + 2
+}
+#[cfg(test)]
+mod tests {
+  use super::*;
+  #[test]
+  fn it_works() {
+     assert_eq!(4, add_two(2));
+  }
+}
+
 fn main() -> Result<(), std::io::Error> {  
   {
-    // 版本格式：主版本号.次版本号.修订号，版本号递增规则如下：
-    //    主版本号：当你做了不兼容的 API 修改，
-    //    次版本号：当你做了向下兼容的功能性新增，
-    //    修订号：当你做了向下兼容的问题修正。
-    // 先行版本号及版本编译信息可以加到“主版本号.次版本号.修订号”的后面，作为延伸。
+    // Rust 的测试特性按精细度划分，分为 3 个层次：
+    //    函数级；
+    //    模块级；
+    //    工程级；
+    // 另外，Rust 还支持对文档进行测试。
+    // cargo test
 
-    // [package]
-    // # 软件包名称，如果需要在别的地方引用此软件包，请用此名称。
-    // name = "hello_world"
-    // # 当前版本号，这里遵循semver标准，也就是语义化版本控制标准。
-    // version = "0.1.0"    # the current version, obeying semver
-    // # 软件所有作者列表
-    // authors = ["you@example.com"]
-    // # 非常有用的一个字段，如果要自定义自己的构建工作流，
-    // # 尤其是要调用外部工具来构建其他本地语言（C、C++、D等）开发的软件包时。
-    // # 这时，自定义的构建流程可以使用rust语言，写在"build.rs"文件中。
-    // build = "build.rs"
-    // # 显式声明软件包文件夹内哪些文件被排除在项目的构建流程之外，
-    // # 哪些文件包含在项目的构建流程中
-    // exclude = ["build/**/*.o", "doc/**/*.html"]
-    // include = ["src/**/*", "Cargo.toml"]
-    // # 当软件包在向公共仓库发布时出现错误时，使能此字段可以阻止此错误。
-    // publish = false
-    // # 关于软件包的一个简短介绍。
-    // description = "..."
-    // # 下面这些字段标明了软件包仓库的更多信息
-    // documentation = "..."
-    // homepage = "..."
-    // repository = "..."
-    // # 顾名思义，此字段指向的文件就是传说中的ReadMe，
-    // # 并且，此文件的内容最终会保存在注册表数据库中。
-    // readme = "..."
-    // # 用于分类和检索的关键词。
-    // keywords = ["...", "..."]
-    // # 软件包的许可证，必须是cargo仓库已列出的已知的标准许可证。
-    // license = "..."
-    // # 软件包的非标许可证书对应的文件路径。
-    // license-file = "..."    
+    // 函数级测试
+    //
+    //  #[test]
+    //  fn it_works() {
+    //    // do test work
+    //    // assert!(expr)               测试表达式是否为 true 或 false
+    //    // assert_eq!(expr, expr)      测试两个表达式的结果是否相等
+    //  }
+    //
+    // 如果你的测试函数没完成，或没有更新，或是故意让它崩溃，但为了让测试能够顺利完成，我们主动可以给测试函数加上 #[should_panic] 标识，就不会让 cargo test 报错了。如
+    //  #[test]
+    //  #[should_panic]
+    //  fn it_works() {
+    //      assert!(false);
+    //  }
+    // 
+    // 有时候，某个测试函数非常耗时，或暂时没更新，我们想不让它参与测试，但是又不想删除它，这时， #[ignore] 就派上用场了。
+    //  #[test]
+    //  #[ignore]
+    //  fn expensive_test() {
+    //      // code that takes an hour to run
+    //  }
 
-    // [dependencies]
-    // hammer = "0.5.0"
-    // color = "> 0.6.0, < 0.8.0"
+    // 模块级测试
+    // 
+    // 有时，我们会组织一批测试用例，这时，模块化的组织结构就有助于建立结构性的测试体系。Rust 中，可以类似如下写法：
+    //   pub fn add_two(a: i32) -> i32 {
+    //       a + 2
+    //   }
+    //   #[cfg(test)]
+    //   mod tests {
+    //       use super::add_two;
+    //       #[test]
+    //       fn it_works() {
+    //           assert_eq!(4, add_two(2));
+    //       }
+    //   }
+    // 也即在 mod 的上面写上 #[cfg(test)] ，表明这个模块是个测试模块。一个测试模块中，可以包含若干测试函数，测试模块中还可以继续包含测试模块，即模块的嵌套。
+    // 如此，就形式了结构化的测试体系，甚是方便。
 
-    // # 注意，此处的cfg可以使用not、any、all等操作符任意组合键值对。
-    // # 并且此用法仅支持cargo 0.9.0（rust 1.8.0）以上版本。
-    // # 如果是windows平台，则需要此依赖。
-    // [target.'cfg(windows)'.dependencies]
-    // winhttp = "0.4.0"
-    // [target.'cfg(unix)'.dependencies]
-    // openssl = "1.0.1"
-    // #如果是32位平台，则需要此依赖。
-    // [target.'cfg(target_pointer_width = "32")'.dependencies]
-    // native = { path = "native/i686" }
-    // [target.'cfg(target_pointer_width = "64")'.dependencies]
-    // native = { path = "native/i686" }
-    // # 另一种写法就是列出平台的全称描述
-    // [target.x86_64-pc-windows-gnu.dependencies]
-    // winhttp = "0.4.0"
-    // [target.i686-unknown-linux-gnu.dependencies]
-    // openssl = "1.0.1"
-    // # 如果使用自定义平台，请将自定义平台文件的完整路径用双引号包含
-    // [target."x86_64/windows.json".dependencies]
-    // winhttp = "0.4.0"
-    // [target."i686/linux.json".dependencies]
-    // openssl = "1.0.1"
-    // native = { path = "native/i686" }
-    // openssl = "1.0.1"
-    // native = { path = "native/x86_64" }
-    // # [dev-dependencies]段落的格式等同于[dependencies]段落，
-    // # 不同之处在于，[dependencies]段落声明的依赖用于构建软件包，
-    // # 而[dev-dependencies]段落声明的依赖仅用于构建测试和性能评估。
-    // # 此外，[dev-dependencies]段落声明的依赖不会传递给其他依赖本软件包的项目
-    // [dev-dependencies]
-    // iron = "0.2"
+    // 工程级测试
+    //
+    // 函数级和模块级的测试，代码是与要测试的模块（编译单元）写在相同的文件中，一般做的是白盒测试。工程级的测试，一般做的就是黑盒集成测试了。
+    // 我们在 tests 目录下，建立一个文件 testit.rs ，名字随便取皆可。内容为：
+    //   extern crate adder;
+    //   #[test]
+    //   fn it_works() {
+    //       assert_eq!(4, adder::add_two(2));
+    //   }
+    // 这里，比如，我们 src 中，写了一个库，提供了一个 add_two 函数，现在进行集成测试。
+    // 首先，用 extern crate 的方式，引入这个库，由于是同一个项目，cargo 会自动找。引入后，就按模块的使用方法调用就行了，其它的测试标识与前面相同。
 
-    // # 开发模板, 对应`cargo build`命令
-    // [profile.dev]
-    // opt-level = 0  # 控制编译器的 --opt-level 参数，也就是优化参数
-    // debug = true   # 控制编译器是否开启 `-g` 参数
-    // rpath = false  # 控制编译器的 `-C rpath` 参数
-    // lto = false    # 控制`-C lto` 参数，此参数影响可执行文件和静态库的生成，
-    // debug-assertions = true  # 控制调试断言是否开启
-    // codegen-units = 1 # 控制编译器的 `-C codegen-units` 参数。注意，当`lto = true`时，此字段值被忽略
-    // # 发布模板, 对应`cargo build --release`命令
-    // [profile.release]
-    // opt-level = 3
-    // debug = false
-    // rpath = false
-    // lto = false
-    // debug-assertions = false
-    // codegen-units = 1
-    // # 测试模板，对应`cargo test`命令
-    // [profile.test]
-    // opt-level = 0
-    // debug = true
-    // rpath = false
-    // lto = false
-    // debug-assertions = true
-    // codegen-units = 1
-    // # 性能评估模板，对应`cargo bench`命令
-    // [profile.bench]
-    // opt-level = 3
-    // debug = false
-    // rpath = false
-    // lto = false
-    // debug-assertions = false
-    // codegen-units = 1
-    // # 文档模板，对应`cargo doc`命令
-    // [profile.doc]
-    // opt-level = 0
-    // debug = true
-    // rpath = false
-    // lto = false
-    // debug-assertions = true
-    // codegen-units = 1
-
-    // [package]
-    // name = "awesome"
-    // [features]
-    // # 此字段设置了可选依赖的默认选择列表，
-    // # 注意这里的"session"并非一个软件包名称，
-    // # 而是另一个featrue字段session
-    // default = ["jquery", "uglifier", "session"]
-    // # 类似这样的值为空的feature一般用于条件编译，
-    // # 类似于`#[cfg(feature = "go-faster")]`。
-    // go-faster = []
-    // # 此feature依赖于bcrypt软件包，
-    // # 这样封装的好处是未来可以对secure-password此feature增加可选项目。
-    // secure-password = ["bcrypt"]
-    // # 此处的session字段导入了cookie软件包中的feature段落中的session字段
-    // session = ["cookie/session"]
-    // [dependencies]
-    // # 必要的依赖
-    // cookie = "1.2.0"
-    // oauth = "1.1.0"
-    // route-recognizer = "=2.1.0"
-    // # 可选依赖
-    // jquery = { version = "1.0.2", optional = true }
-    // uglifier = { version = "1.5.3", optional = true }
-    // bcrypt = { version = "*", optional = true }
-    // civet = { version = "*", optional = true }  
-
-    // [dependencies.awesome]
-    // version = "1.3.5"
-    // default-features = false # 禁用awesome 的默认features
-    // features = ["secure-password", "civet"] # 使用此处列举的各项features
-
-    // 使用features时需要遵循以下规则：
-    //   feature名称在本描述文件中不能与出现的软件包名称冲突
-    //   除了default feature，其他所有的features均是可选的
-    //   features不能相互循环包含
-    //   开发依赖包不能包含在内
-    //   features组只能依赖于可选软件包
-    // features的一个重要用途就是，当开发者需要对软件包进行最终的发布时，在进行构建时可以声明暴露给终端用户的features，这可以通过下述命令实现：cargo build --release --features "shumway pdf"
-
-    // 当运行cargo test命令时，cargo将会按做以下事情：
-    //   编译并运行软件包源代码中被#[cfg(test)] 所标志的单元测试
-    //   编译并运行文档测试
-    //   编译并运行集成测试
-    //   编译examples
-
-    // 所有的诸如[[bin]], [lib], [[bench]], [[test]]以及 [[example]]等字段，均提供了类似的配置，以说明构建目标应该怎样被构建。例如（下述例子中[lib]段落中各字段值均为默认值）：
-    //   [lib]
-    //   # 库名称，默认与项目名称相同
-    //   name = "foo"
-    //   # 此选项仅用于[lib]段落，其决定构建目标的构建方式，
-    //   # 可以取dylib, rlib, staticlib 三种值之一，表示生成动态库、r库或者静态库。
-    //   crate-type = ["dylib"]
-    //   # path字段声明了此构建目标相对于cargo.toml文件的相对路径
-    //   path = "src/lib.rs"
-    //   # 单元测试开关选项
-    //   test = true
-    //   # 文档测试开关选项
-    //   doctest = true
-    //   # 性能评估开关选项
-    //   bench = true
-    //   # 文档生成开关选项
-    //   doc = true
-    //   # 是否构建为编译器插件的开关选项
-    //   plugin = false
-    //   # 如果设置为false，`cargo test`将会忽略传递给rustc的--test参数。
-    //   harness = true
+    // 文档级测试
+    //
+    // Rust 对文档的哲学，是不要单独写文档，一是代码本身是文档，二是代码的注释就是文档。Rust 不但可以自动抽取代码中的文档，形成标准形式的文档集合，还可以对文档中的示例代码进行测试。如本文件开头的文档测试
   }
+
+  {
+    // 性能测试: cargo bench
+    //
+    // 单元测试是用来校验程序的正确性的，然而，程序能正常运行后，往往还需要测试程序（一部分）的执行速度，这时，f就需要用到性能测试。
+    // 通常来讲，所谓性能测试，指的是测量程序运行的速度，即运行一次要多少时间（通常是执行多次求平均值）。Rust 竟然连这个特性都集成在语言基础特性中，真的是一门很重视工程性的语言。
+    //    #[bench]
+    //    fn bench_add_two(b: &mut Bencher) {
+    //        b.iter(|| add_two(2));
+    //    }
+
+    // 写测评代码的时候，需要注意以下一些点：
+    //   只把你需要做性能测试的代码（函数）放在评测函数中；
+    //   对于参与做性能测试的代码（函数），要求每次测试做同样的事情，不要做累积和改变外部状态的操作；
+    //   参数性能测试的代码（函数），执行时间不要太长。太长的话，最好分成几个部分测试。这也方便找出性能瓶颈所在地方。
+  }
+
   Ok(())
 }
